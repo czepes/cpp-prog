@@ -1,7 +1,6 @@
 CC = g++
 CFLAGS = -Wall -std=c++17
 TARGET = prog
-FILE = main
 OBJS = main.o words-stat.o words-writer.o
 
 $(TARGET): $(OBJS)
