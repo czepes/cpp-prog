@@ -16,15 +16,13 @@ private:
   static constexpr int default_size = BIT_ARRAY_DEFAULT_SIZE;
   static constexpr float resize_mul = 1.5;
 
-  std::vector<unsigned long> buffer;
+  std::vector<unsigned long> bytes;
   unsigned int bits;
 
   bool is_full();
-  bool elem_is_full();
-  int get_elems_amount();
 
 public:
-  static constexpr int elem_bits = sizeof(unsigned long) * BYTE_SIZE;
+  static constexpr int byte_bits = sizeof(unsigned long) * BYTE_SIZE;
 
   BitArray();
   ~BitArray();

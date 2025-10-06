@@ -130,11 +130,11 @@ TEST_F(BitArrayTest, PushBack) {
 
   ba_empty->clear();
 
-  for (int i = 0; i <= BitArray::elem_bits; i++) {
+  for (int i = 0; i <= BitArray::byte_bits; i++) {
     ba_empty->push_back(true);
   }
 
-  EXPECT_EQ(ba_empty->count(), BitArray::elem_bits + 1);
+  EXPECT_EQ(ba_empty->count(), BitArray::byte_bits + 1);
 }
 
 TEST_F(BitArrayTest, Swap) {
@@ -273,15 +273,59 @@ TEST_F(BitArrayTest, BitShiftAssignOperators) {
 
   EXPECT_EQ(ba_empty->to_string(), "1");
 
-  *ba_empty <<= 128;
+  *ba_empty <<= 32;
+  ba_empty->set(1);
+  ba_empty->set(0);
+  *ba_empty <<= 64;
+  ba_empty->set(2);
+  ba_empty->set(1);
+  ba_empty->set(0);
 
-  EXPECT_EQ(ba_empty->size(), 129);
+  EXPECT_EQ(ba_empty->size(), 97);
+  EXPECT_EQ(ba_empty->count(), 6);
+  EXPECT_TRUE((*ba_empty)[96]);
+  EXPECT_FALSE((*ba_empty)[95]);
+  EXPECT_TRUE((*ba_empty)[65]);
+  EXPECT_TRUE((*ba_empty)[64]);
+  EXPECT_FALSE((*ba_empty)[63]);
+  EXPECT_FALSE((*ba_empty)[3]);
+  EXPECT_TRUE((*ba_empty)[2]);
+  EXPECT_TRUE((*ba_empty)[1]);
+  EXPECT_TRUE((*ba_empty)[0]);
+
+  std::cerr << ba_empty->to_string() << std::endl;
+  *ba_empty <<= 127;
+  std::cerr << ba_empty->to_string() << std::endl;
+
+  EXPECT_EQ(ba_empty->size(), 97 + 127);
+  EXPECT_EQ(ba_empty->count(), 6);
+
+  *ba_empty >>= 127 + 2;
+
+  EXPECT_EQ(ba_empty->size(), 95);
+  EXPECT_EQ(ba_empty->count(), 4);
+  EXPECT_TRUE((*ba_empty)[94]);
+  EXPECT_FALSE((*ba_empty)[93]);
+  EXPECT_TRUE((*ba_empty)[63]);
+  EXPECT_TRUE((*ba_empty)[62]);
+  EXPECT_FALSE((*ba_empty)[61]);
+  EXPECT_FALSE((*ba_empty)[1]);
+  EXPECT_TRUE((*ba_empty)[0]);
+
+  *ba_empty >>= 70;
+
+  EXPECT_EQ(ba_empty->size(), 25);
   EXPECT_EQ(ba_empty->count(), 1);
-  EXPECT_TRUE((*ba_empty)[128]);
+  EXPECT_TRUE((*ba_empty)[24]);
+  EXPECT_FALSE((*ba_empty)[23]);
 
-  EXPECT_THROW((*ba_empty) <<= -1, std::invalid_argument);
-  EXPECT_THROW((*ba_empty) >>= -1, std::invalid_argument);
-  EXPECT_THROW((*ba_empty) <<= INT_MAX, std::out_of_range);
+  *ba_empty >>= 25;
+
+  EXPECT_TRUE(ba_empty->empty());
+
+  EXPECT_THROW((*ba_orig) <<= -1, std::invalid_argument);
+  EXPECT_THROW((*ba_orig) >>= -1, std::invalid_argument);
+  EXPECT_THROW((*ba_orig) <<= INT_MAX, std::out_of_range);
 }
 
 TEST_F(BitArrayTest, BitShiftOperators) {
