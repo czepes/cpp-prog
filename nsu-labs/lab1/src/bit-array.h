@@ -9,7 +9,6 @@
 #define BYTE_SIZE 8
 #define BIT_ARRAY_DEFAULT_SIZE 1
 
-// TODO: Iterator
 using byte_type = unsigned long;
 
 class BitArray {
@@ -50,7 +49,6 @@ public:
 
   // Bit operators for bit array
   // Can be used only for array of the same size
-  // TODO: Error message and handling
   BitArray &operator&=(const BitArray &b);
   BitArray &operator|=(const BitArray &b);
   BitArray &operator^=(const BitArray &b);
@@ -102,34 +100,21 @@ public:
     unsigned int idx;
 
   public:
-    const_iterator(const BitArray *ba, int idx) : ba(ba), idx(idx) {}
+    const_iterator(const BitArray *ba, int idx);
 
-    bool operator*() { return (*ba)[idx]; }
+    bool operator*();
 
-    const_iterator &operator++() {
-      ++idx;
-      return *this;
-    }
+    const_iterator &operator++();
 
-    const_iterator operator++(int) {
-      const_iterator temp = *this;
-      idx++;
-      return temp;
-    }
+    const_iterator operator++(int);
 
-    bool operator==(const const_iterator &other) const {
-      return ba == other.ba && idx == other.idx;
-    }
+    bool operator==(const const_iterator &other) const;
 
-    bool operator!=(const const_iterator &other) const {
-      return !(*this == other);
-    }
+    bool operator!=(const const_iterator &other) const;
   };
 
-  const_iterator begin() const { return const_iterator(this, 0); };
-  const_iterator end() const { return const_iterator(this, bits); };
-  const_iterator cbegin() const { return const_iterator(this, 0); };
-  const_iterator cend() const { return const_iterator(this, bits); };
+  const_iterator begin() const;
+  const_iterator end() const;
 };
 
 bool operator==(const BitArray &b1, const BitArray &b2);

@@ -33,45 +33,70 @@ protected:
 };
 
 TEST_F(BitArrayTest, AreEqualOnConstructCopy) {
-  EXPECT_EQ(ba_char->size(), ba_copy->size());
-  EXPECT_EQ(ba_char->to_string(), ba_copy->to_string());
-  EXPECT_EQ(*ba_char, *ba_copy);
+  BitArray &ba1 = *ba_char;
+  BitArray &ba2 = *ba_copy;
+
+  EXPECT_EQ(ba1.size(), ba2.size());
+  EXPECT_EQ(ba1.to_string(), ba2.to_string());
+  EXPECT_EQ(ba1, ba2);
 }
 
 TEST_F(BitArrayTest, ToString) {
-  EXPECT_EQ(ba_empty->to_string(), "");
-  EXPECT_EQ(ba_char->to_string(), std::string(ba_char->size(), '1'));
-  EXPECT_EQ(ba_long->to_string(), std::string(ba_long->size(), '1'));
+  BitArray &ba1 = *ba_empty;
+  BitArray &ba2 = *ba_char;
+  BitArray &ba3 = *ba_long;
+
+  EXPECT_EQ(ba1.to_string(), "");
+  EXPECT_EQ(ba2.to_string(), std::string(ba2.size(), '1'));
+  EXPECT_EQ(ba3.to_string(), std::string(ba3.size(), '1'));
 }
 
 TEST_F(BitArrayTest, Count) {
-  EXPECT_EQ(ba_empty->count(), 0);
-  EXPECT_EQ(ba_char->count(), 8);
-  EXPECT_EQ(ba_copy->count(), 8);
-  EXPECT_EQ(ba_long->count(), 256);
+  BitArray &ba1 = *ba_empty;
+  BitArray &ba2 = *ba_char;
+  BitArray &ba3 = *ba_copy;
+  BitArray &ba4 = *ba_long;
+
+  EXPECT_EQ(ba1.count(), 0);
+  EXPECT_EQ(ba2.count(), 8);
+  EXPECT_EQ(ba3.count(), 8);
+  EXPECT_EQ(ba4.count(), 256);
 }
 
 TEST_F(BitArrayTest, Any) {
-  EXPECT_FALSE(ba_empty->any());
-  EXPECT_TRUE(ba_char->any());
-  EXPECT_TRUE(ba_copy->any());
-  EXPECT_TRUE(ba_long->any());
+  BitArray &ba1 = *ba_empty;
+  BitArray &ba2 = *ba_char;
+  BitArray &ba3 = *ba_copy;
+  BitArray &ba4 = *ba_long;
+
+  EXPECT_FALSE(ba1.any());
+  EXPECT_TRUE(ba2.any());
+  EXPECT_TRUE(ba3.any());
+  EXPECT_TRUE(ba4.any());
 }
 
 TEST_F(BitArrayTest, None) {
-  EXPECT_TRUE(ba_empty->none());
-  EXPECT_FALSE(ba_char->none());
-  EXPECT_FALSE(ba_copy->none());
-  EXPECT_FALSE(ba_long->none());
+  BitArray &ba1 = *ba_empty;
+  BitArray &ba2 = *ba_char;
+  BitArray &ba3 = *ba_copy;
+  BitArray &ba4 = *ba_long;
+
+  EXPECT_TRUE(ba1.none());
+  EXPECT_FALSE(ba2.none());
+  EXPECT_FALSE(ba3.none());
+  EXPECT_FALSE(ba4.none());
 }
 
 TEST_F(BitArrayTest, Empty) {
-  EXPECT_TRUE(ba_empty->empty());
-  EXPECT_FALSE(ba_char->empty());
+  BitArray &ba1 = *ba_empty;
+  BitArray &ba2 = *ba_char;
 
-  ba_empty->push_back(false);
+  EXPECT_TRUE(ba1.empty());
+  EXPECT_FALSE(ba2.empty());
 
-  EXPECT_FALSE(ba_empty->empty());
+  ba1.push_back(false);
+
+  EXPECT_FALSE(ba1.empty());
 }
 
 TEST_F(BitArrayTest, AtOperator) {
@@ -90,9 +115,11 @@ TEST_F(BitArrayTest, AtOperator) {
 }
 
 TEST_F(BitArrayTest, Clear) {
-  ba_long->clear();
-  EXPECT_FALSE(ba_long->any());
-  EXPECT_TRUE(ba_long->empty());
+  BitArray &ba = *ba_long;
+
+  ba.clear();
+  EXPECT_FALSE(ba.any());
+  EXPECT_TRUE(ba.empty());
 }
 
 TEST_F(BitArrayTest, SetReset) {
@@ -362,7 +389,7 @@ TEST_F(BitArrayTest, BitShiftAssignOperators) {
 
   ba1 >>= 25;
 
-  EXPECT_TRUE(ba_empty->empty());
+  EXPECT_TRUE(ba1.empty());
 
   EXPECT_THROW(ba2 <<= -1, std::invalid_argument);
   EXPECT_THROW(ba2 >>= -1, std::invalid_argument);
@@ -397,15 +424,20 @@ TEST_F(BitArrayTest, BitShiftOperators) {
 }
 
 TEST_F(BitArrayTest, ConstIterator) {
-  const BitArray &ba = *ba_char;
+  BitArray &ba = *ba_char;
 
   for (const bool bit : ba) {
     EXPECT_TRUE(bit);
   }
 
-  ba_char->reset();
+  ba.reset();
 
   for (const bool bit : ba) {
     EXPECT_FALSE(bit);
+  }
+
+  BitArray::const_iterator iter = ba.begin();
+  while (iter != ba.end()) {
+    EXPECT_FALSE(*(iter++));
   }
 }

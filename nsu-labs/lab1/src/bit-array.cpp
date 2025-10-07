@@ -365,3 +365,36 @@ BitArray operator|(const BitArray &b1, const BitArray &b2) {
 BitArray operator^(const BitArray &b1, const BitArray &b2) {
   return BitArray(b1) ^= b2;
 }
+
+BitArray::const_iterator::const_iterator(const BitArray *ba, int idx)
+    : ba(ba), idx(idx) {}
+
+bool BitArray::const_iterator::operator*() { return (*ba)[idx]; }
+
+BitArray::const_iterator &BitArray::const_iterator::operator++() {
+  ++idx;
+  return *this;
+}
+
+BitArray::const_iterator BitArray::const_iterator::operator++(int) {
+  const_iterator temp = *this;
+  idx++;
+  return temp;
+}
+
+bool BitArray::const_iterator::operator==(
+    const BitArray::const_iterator &other) const {
+  return ba == other.ba && idx == other.idx;
+}
+
+bool BitArray::const_iterator::operator!=(
+    const BitArray::const_iterator &other) const {
+  return !(*this == other);
+}
+
+BitArray::const_iterator BitArray::begin() const {
+  return const_iterator(this, 0);
+};
+BitArray::const_iterator BitArray::end() const {
+  return const_iterator(this, bits);
+};

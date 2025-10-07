@@ -16,7 +16,7 @@ include(GoogleTest)
 
 enable_testing()
 
-add_library(bitarray ./src/bit-array.cpp)
+add_library(bitarray ./src/bit-array.cpp ./src/bit-array.h)
 target_compile_options(bitarray PRIVATE -g -O0 --coverage -fprofile-arcs
                                         -ftest-coverage)
 
@@ -31,6 +31,7 @@ add_custom_target(
   COMMAND lcov --capture --directory . --output-file coverage.info
   COMMAND lcov --remove coverage.info '/usr/include/*' --output-file
           coverage.info
+  COMMAND lcov --list coverage.info
   COMMAND genhtml coverage.info --output-directory coverage-report
   COMMAND echo "=== Coverage Report ==="
   COMMAND
