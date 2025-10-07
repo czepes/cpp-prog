@@ -1,11 +1,12 @@
 #include "bit-array.h"
-#include <cmath>
 #include <limits>
 #include <stdexcept>
 
 // Private
 
-bool BitArray::is_full() { return bits % byte_bits == 0; }
+int BitArray::to_bytes(int bits) {
+  return bits / byte_bits + (bits % byte_bits ? 1 : 0);
+}
 
 // Public
 
@@ -13,8 +14,8 @@ BitArray::BitArray() { bits = 0; }
 
 BitArray::~BitArray() { bytes.clear(); }
 
-BitArray::BitArray(int num_bits, unsigned long value) {
-  int size = ceil((float)num_bits / byte_bits);
+BitArray::BitArray(int num_bits, byte_type value) {
+  const int size = to_bytes(num_bits);
 
   bytes.resize(size);
   bytes.assign(size, value);
@@ -29,9 +30,9 @@ BitArray::BitArray(const BitArray &b) {
 
 void BitArray::swap(BitArray &b) {
   bytes.swap(b.bytes);
-  unsigned int swapped = b.bits;
+  const unsigned int tmp = b.bits;
   b.bits = bits;
-  bits = swapped;
+  bits = tmp;
 }
 
 void BitArray::resize(int num_bits, bool value) {
@@ -50,14 +51,20 @@ void BitArray::resize(int num_bits, bool value) {
     throw std::out_of_range("Unable to resize: num_bits is too large");
   }
 
-  const int size = ceil((float)num_bits / byte_bits);
-  bytes.resize(size);
+  const int size = to_bytes(num_bits);
+  if (size != bytes.size()) {
+    bytes.resize(size);
+  }
 
   const unsigned int old_bits = bits;
   bits = num_bits;
 
+  if (!value) {
+    return;
+  }
+
   for (int i = old_bits; i < bits; i++) {
-    set(i, value);
+    set(i, true);
   }
 }
 
@@ -67,15 +74,7 @@ void BitArray::clear() {
 }
 
 void BitArray::push_back(bool bit) {
-  if (bytes.empty()) {
-    bytes.resize(default_size);
-  }
-
-  if (is_full()) {
-    bytes.resize(ceil((float)bytes.size() * resize_mul));
-  }
-
-  bits++;
+  resize(bits + 1);
   set(bits - 1, bit);
 }
 
@@ -88,11 +87,11 @@ BitArray &BitArray::set(int n, bool val) {
     throw std::out_of_range("Unable to set: n is out of range");
   }
 
-  int byte_pos = n / byte_bits;
-  int bit_pos = n % byte_bits;
+  const int byte_pos = n / byte_bits;
+  const int bit_pos = n % byte_bits;
 
-  unsigned long byte = bytes.at(byte_pos);
-  unsigned long mask = 1UL << bit_pos;
+  const byte_type byte = bytes.at(byte_pos);
+  const byte_type mask = 1UL << bit_pos;
 
   bytes[byte_pos] = val ? byte | mask : byte & ~mask;
 
@@ -100,56 +99,57 @@ BitArray &BitArray::set(int n, bool val) {
 }
 
 BitArray &BitArray::set() {
-  bytes.assign(bytes.size(), std::numeric_limits<unsigned long>::max());
+  const int size = bytes.size();
+  const int trail = bits % byte_bits;
+
+  if (size > 0) {
+    bytes.assign(size, std::numeric_limits<byte_type>::max());
+  }
+  if (trail > 0) {
+    bytes[size - 1] = (1UL << trail) - 1;
+  }
+
   return *this;
 }
 
 BitArray &BitArray::reset(int n) {
-  this->set(n, false);
+  set(n, false);
   return *this;
 }
 
 BitArray &BitArray::reset() {
-  bytes.assign(bytes.capacity(), 0);
+  bytes.assign(bytes.size(), 0);
   return *this;
 }
 
 bool BitArray::any() const {
-  int size = bytes.size();
+  const int size = bytes.size();
+
   if (size <= 0) {
     return false;
   }
 
-  for (int i = 0; i < size - 1; i++) {
-    if (bytes.at(i) > 0)
-      return true;
-  }
-
-  unsigned long byte = bytes.at(size - 1);
-  for (int i = 0; i < bits % byte_bits; i++) {
-    if (byte & 1UL) {
+  for (const byte_type byte : bytes) {
+    if (byte > 0) {
       return true;
     }
-    byte >>= 1;
   }
 
   return false;
 }
 
-bool BitArray::none() const { return !this->any(); }
+bool BitArray::none() const { return !any(); }
 
 int BitArray::count() const {
   int count = 0;
-  int pos = 0;
-  unsigned long byte;
 
-  for (unsigned int i = 0; i < bits; i++) {
-    if (i % byte_bits == 0) {
-      byte = bytes.at(pos++);
+  for (const byte_type byte : bytes) {
+    byte_type cur = byte;
+
+    while (cur > 0) {
+      count += cur & 1UL;
+      cur >>= 1;
     }
-
-    count += byte & 1UL;
-    byte >>= 1;
   }
 
   return count;
@@ -161,16 +161,10 @@ bool BitArray::empty() const { return bits == 0; }
 
 std::string BitArray::to_string() const {
   std::string str(bits, '0');
-  int pos = 0;
-  unsigned long byte;
+  int pos = bits - 1;
 
-  for (unsigned int i = 0; i < bits; i++) {
-    if (i % byte_bits == 0) {
-      byte = bytes.at(pos++);
-    }
-
-    str[bits - i - 1] = byte & 1UL ? '1' : '0';
-    byte >>= 1;
+  for (const bool bit : *this) {
+    str[pos--] = bit ? '1' : '0';
   }
 
   return str;
@@ -205,7 +199,8 @@ BitArray &BitArray::operator&=(const BitArray &b) {
         "BitArrays must have the same size for &= operator");
   }
 
-  int size = ceil((float)bits / byte_bits);
+  const int size = bytes.size();
+
   for (int i = 0; i < size; i++) {
     bytes[i] &= b.bytes[i];
   }
@@ -223,7 +218,8 @@ BitArray &BitArray::operator|=(const BitArray &b) {
         "BitArrays must have the same size for |= operator");
   }
 
-  int size = ceil((float)bits / byte_bits);
+  const int size = bytes.size();
+
   for (int i = 0; i < size; i++) {
     bytes[i] |= b.bytes[i];
   }
@@ -237,7 +233,8 @@ BitArray &BitArray::operator^=(const BitArray &b) {
         "BitArrays must have the same size for ^= operator");
   }
 
-  int size = ceil((float)bits / byte_bits);
+  const int size = bytes.size();
+
   for (int i = 0; i < size; i++) {
     bytes[i] ^= b.bytes[i];
   }
@@ -255,10 +252,10 @@ BitArray &BitArray::operator<<=(int n) {
   }
 
   if (n > std::numeric_limits<int>::max() - bits) {
-    throw std::out_of_range("BitArray bitwise >>= shift amount is too large");
+    throw std::out_of_range("BitArray bitwise >>= n is too large");
   }
 
-  this->resize(bits + n);
+  resize(bits + n);
 
   const int bit_shift = n % byte_bits;
   const int byte_shift = n / byte_bits;
@@ -266,21 +263,18 @@ BitArray &BitArray::operator<<=(int n) {
 
   if (byte_shift > 0) {
     for (int i = last; i >= 0; i--) {
-      bytes[i] = i >= byte_shift ? bytes[i - byte_shift] : 0;
+      bytes[i] = i >= byte_shift ? bytes[i - byte_shift] : 0UL;
     }
   }
 
   if (bit_shift > 0) {
-    for (int i = last; i >= byte_shift; i--) {
-      unsigned long mask = 0;
+    const int inv_shift = byte_bits - bit_shift;
 
-      if (i > byte_shift) {
-        unsigned int shift = byte_bits - bit_shift;
-        mask = (~0UL << shift & bytes[i - 1]) >> shift;
-      }
-
-      bytes[i] = bytes[i] << bit_shift | mask;
+    for (int i = last; i > byte_shift; i--) {
+      bytes[i] = (bytes[i] << bit_shift) | (bytes[i - 1] >> inv_shift);
     }
+
+    bytes[byte_shift] <<= bit_shift;
   }
 
   return *this;
@@ -296,35 +290,32 @@ BitArray &BitArray::operator>>=(int n) {
   }
 
   if (n >= bits) {
-    this->reset();
-    this->resize(0);
+    reset();
+    resize(0);
     return *this;
   }
 
   const int bit_shift = n % byte_bits;
   const int byte_shift = n / byte_bits;
-  const int size = bytes.size() - byte_shift;
+  const int new_size = bytes.size() - byte_shift;
 
   if (byte_shift > 0) {
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < new_size; i++) {
       bytes[i] = bytes[i + byte_shift];
     }
   }
 
   if (bit_shift > 0) {
-    for (int i = 0; i < size; i++) {
-      unsigned long mask = 0;
+    const int inv_shift = byte_bits - bit_shift;
 
-      if (i < size - 1) {
-        unsigned int shift = byte_bits - bit_shift;
-        mask = (~0UL >> shift & bytes[i + 1]) << shift;
-      }
-
-      bytes[i] = bytes[i] >> bit_shift | mask;
+    for (int i = 0; i < new_size - 1; i++) {
+      bytes[i] = (bytes[i] >> bit_shift) | (bytes[i + 1] << inv_shift);
     }
+
+    bytes[new_size - 1] >>= bit_shift;
   }
 
-  this->resize(bits - n);
+  resize(bits - n);
 
   return *this;
 }

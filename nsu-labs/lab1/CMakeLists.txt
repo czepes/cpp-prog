@@ -16,16 +16,18 @@ include(GoogleTest)
 
 enable_testing()
 
-add_library(bitarray_lib ./src/bit-array.cpp)
-target_compile_options(bitarray_lib PRIVATE -g -O0 --coverage -fprofile-arcs
-                                            -ftest-coverage)
+add_library(bitarray ./src/bit-array.cpp)
+target_compile_options(bitarray PRIVATE -g -O0 --coverage -fprofile-arcs
+                                        -ftest-coverage)
 
-add_executable(bitarray_test ./test/test.cpp)
-target_link_libraries(bitarray_test GTest::gtest_main bitarray_lib gcov)
-target_link_options(bitarray_test PRIVATE --coverage)
+add_executable(bitarraytest ./test/test.cpp)
+target_link_libraries(bitarraytest GTest::gtest_main bitarray gcov)
+target_link_options(bitarraytest PRIVATE --coverage)
 
 add_custom_target(
   coverage
+  COMMAND make bitarraytest
+  COMMAND ${CMAKE_BINARY_DIR}/bitarraytest
   COMMAND lcov --capture --directory . --output-file coverage.info
   COMMAND lcov --remove coverage.info '/usr/include/*' --output-file
           coverage.info
@@ -37,6 +39,6 @@ add_custom_target(
   COMMAND echo "=== Coverage summary ==="
   COMMAND lcov --summary coverage.info
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  DEPENDS bitarray_test)
+  DEPENDS bitarraytest)
 
-gtest_discover_tests(bitarray_test)
+gtest_discover_tests(bitarraytest)

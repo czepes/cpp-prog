@@ -10,26 +10,26 @@
 #define BIT_ARRAY_DEFAULT_SIZE 1
 
 // TODO: Iterator
+using byte_type = unsigned long;
 
 class BitArray {
 private:
   static constexpr int default_size = BIT_ARRAY_DEFAULT_SIZE;
-  static constexpr float resize_mul = 1.5;
 
-  std::vector<unsigned long> bytes;
+  std::vector<byte_type> bytes;
   unsigned int bits;
 
-  bool is_full();
+  static int to_bytes(int bits);
 
 public:
-  static constexpr int byte_bits = sizeof(unsigned long) * BYTE_SIZE;
+  static constexpr int byte_bits = sizeof(byte_type) * BYTE_SIZE;
 
   BitArray();
   ~BitArray();
 
   // Construct array, with specified amount of bits
   // First sizeof(long) bits may be initialized with parameter 'value'
-  explicit BitArray(int num_bits, unsigned long value = 0);
+  explicit BitArray(int num_bits, byte_type value = 0);
   BitArray(const BitArray &b);
 
   // Replace values of 2 bit arrays
