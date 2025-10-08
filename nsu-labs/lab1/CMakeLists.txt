@@ -25,6 +25,15 @@ target_link_libraries(bitarraytest GTest::gtest_main bitarray gcov)
 target_link_options(bitarraytest PRIVATE --coverage)
 
 add_custom_target(
+  gcovr
+  COMMAND make bitarraytest
+  COMMAND ${CMAKE_BINARY_DIR}/bitarraytest
+  COMMAND gcovr -r ${PROJECT_SOURCE_DIR} --html-details gcovr.html --txt
+  COMMAND echo
+          "Detailed coverage report generated in ${CMAKE_BINARY_DIR}/gcovr.html"
+)
+
+add_custom_target(
   coverage
   COMMAND make bitarraytest
   COMMAND ${CMAKE_BINARY_DIR}/bitarraytest
