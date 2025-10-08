@@ -259,10 +259,10 @@ BitArray &BitArray::operator<<=(int n) {
 
   const int bit_shift = n % byte_bits;
   const int byte_shift = n / byte_bits;
-  const int last = bytes.size() - 1;
+  const int size = bytes.size();
 
   if (byte_shift > 0) {
-    for (int i = last; i >= 0; i--) {
+    for (int i = size - 1; i >= 0; i--) {
       bytes[i] = i >= byte_shift ? bytes[i - byte_shift] : 0UL;
     }
   }
@@ -270,7 +270,7 @@ BitArray &BitArray::operator<<=(int n) {
   if (bit_shift > 0) {
     const int inv_shift = byte_bits - bit_shift;
 
-    for (int i = last; i > byte_shift; i--) {
+    for (int i = size - 1; i > byte_shift; i--) {
       bytes[i] = (bytes[i] << bit_shift) | (bytes[i - 1] >> inv_shift);
     }
 
