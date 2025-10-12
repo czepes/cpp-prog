@@ -98,6 +98,7 @@ public:
   private:
     const BitArray *ba;
     unsigned int idx;
+    byte_type byte;
 
   public:
     const_iterator(const BitArray *ba, int idx);

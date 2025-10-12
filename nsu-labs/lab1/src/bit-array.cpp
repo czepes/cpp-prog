@@ -367,18 +367,29 @@ BitArray operator^(const BitArray &b1, const BitArray &b2) {
 }
 
 BitArray::const_iterator::const_iterator(const BitArray *ba, int idx)
-    : ba(ba), idx(idx) {}
+    : ba(ba), idx(idx) {
+  byte = idx >= ba->bits ? 0 : ba->bytes[idx / byte_bits];
+}
 
-bool BitArray::const_iterator::operator*() { return (*ba)[idx]; }
+bool BitArray::const_iterator::operator*() { return byte & 1UL; }
 
 BitArray::const_iterator &BitArray::const_iterator::operator++() {
   ++idx;
+  byte >>= 1;
+
+  const int bit_pos = idx % byte_bits;
+  const int byte_pos = idx / byte_bits;
+
+  if (bit_pos == 0 && byte_pos < ba->bytes.size()) {
+    byte = ba->bytes[byte_pos];
+  }
+
   return *this;
 }
 
 BitArray::const_iterator BitArray::const_iterator::operator++(int) {
   const_iterator temp = *this;
-  idx++;
+  ++(*this);
   return temp;
 }
 

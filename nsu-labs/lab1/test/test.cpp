@@ -49,6 +49,18 @@ TEST_F(BitArrayTest, ToString) {
   EXPECT_EQ(ba1.to_string(), "");
   EXPECT_EQ(ba2.to_string(), std::string(ba2.size(), '1'));
   EXPECT_EQ(ba3.to_string(), std::string(ba3.size(), '1'));
+
+  const int new_size = 100;
+  std::string str(new_size, '0');
+
+  ba1.resize(new_size);
+
+  for (int i = 1; i < new_size; i += 2) {
+    ba1.set(i);
+    str[new_size - i - 1] = '1';
+  }
+
+  EXPECT_EQ(ba1.to_string(), str);
 }
 
 TEST_F(BitArrayTest, Count) {
@@ -439,5 +451,20 @@ TEST_F(BitArrayTest, ConstIterator) {
   BitArray::const_iterator iter = ba.begin();
   while (iter != ba.end()) {
     EXPECT_FALSE(*(iter++));
+  }
+
+  // Even bits are 1, odd bits are 0
+  for (int i = 0; i < ba.size(); i += 2) {
+    ba.set(i);
+  }
+
+  int i = 0;
+  for (const bool bit : ba) {
+    if (i % 2) {
+      EXPECT_FALSE(bit);
+    } else {
+      EXPECT_TRUE(bit);
+    }
+    i++;
   }
 }
