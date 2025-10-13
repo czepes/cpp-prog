@@ -109,10 +109,11 @@ TEST_F(BitArrayTest, Empty) {
   ba1.push_back(false);
 
   EXPECT_FALSE(ba1.empty());
+  EXPECT_FALSE(ba1[0]);
 }
 
 TEST_F(BitArrayTest, AtOperator) {
-  BitArray &ba1 = *ba_empty;
+  const BitArray &ba1 = *ba_empty;
   BitArray &ba2 = *ba_char;
 
   EXPECT_THROW(ba1[0], std::out_of_range);
@@ -435,22 +436,34 @@ TEST_F(BitArrayTest, BitShiftOperators) {
   EXPECT_TRUE(ba3.empty());
 }
 
-TEST_F(BitArrayTest, ConstIterator) {
+TEST_F(BitArrayTest, BitProxy) {
+  BitArray &ba = *ba_char;
+  ba[0] = false;
+  EXPECT_FALSE(ba[0]);
+  EXPECT_TRUE(ba[1]);
+
+  EXPECT_THROW(ba[-1], std::out_of_range);
+  EXPECT_THROW(ba[ba.size()], std::out_of_range);
+}
+
+TEST_F(BitArrayTest, Iterator) {
+  const BitArray &bac = *ba_char;
   BitArray &ba = *ba_char;
 
-  for (const bool bit : ba) {
+  for (auto bit : bac) {
     EXPECT_TRUE(bit);
   }
 
   ba.reset();
 
-  for (const bool bit : ba) {
+  for (const auto bit : bac) {
     EXPECT_FALSE(bit);
   }
 
-  BitArray::const_iterator iter = ba.begin();
-  while (iter != ba.end()) {
-    EXPECT_FALSE(*(iter++));
+  BitArray::ConstIterator const_iter = bac.begin();
+
+  while (const_iter != bac.end()) {
+    EXPECT_FALSE(*(const_iter++));
   }
 
   // Even bits are 1, odd bits are 0
@@ -459,7 +472,7 @@ TEST_F(BitArrayTest, ConstIterator) {
   }
 
   int i = 0;
-  for (const bool bit : ba) {
+  for (const auto bit : bac) {
     if (i % 2) {
       EXPECT_FALSE(bit);
     } else {
@@ -467,4 +480,26 @@ TEST_F(BitArrayTest, ConstIterator) {
     }
     i++;
   }
+
+  for (auto bit : ba) {
+    bit = !bit;
+  }
+
+  i = 0;
+  for (const auto bit : bac) {
+    if (i % 2) {
+      EXPECT_TRUE(bit);
+    } else {
+      EXPECT_FALSE(bit);
+    }
+    i++;
+  }
+
+  BitArray::Iterator iter = ba.begin();
+
+  while (iter != ba.end()) {
+    *(iter++) = true;
+  }
+
+  EXPECT_EQ(ba.count(), ba.size());
 }

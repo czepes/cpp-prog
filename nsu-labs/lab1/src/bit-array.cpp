@@ -10,7 +10,7 @@ int BitArray::to_bytes(int bits) {
 
 // Public
 
-BitArray::BitArray() { bits = 0; }
+BitArray::BitArray() : bits(0) {}
 
 BitArray::~BitArray() { bytes.clear(); }
 
@@ -23,10 +23,8 @@ BitArray::BitArray(int num_bits, byte_type value) {
   bits = num_bits;
 }
 
-BitArray::BitArray(const BitArray &b) {
-  bits = b.bits;
-  bytes = std::vector(b.bytes);
-}
+BitArray::BitArray(const BitArray &b)
+    : bits(b.bits), bytes(std::vector(b.bytes)) {}
 
 void BitArray::swap(BitArray &b) {
   bytes.swap(b.bytes);
@@ -171,14 +169,21 @@ std::string BitArray::to_string() const {
 }
 
 bool BitArray::operator[](int i) const {
-  if (i >= bits) {
+  if (i < 0 || i >= bits) {
     throw std::out_of_range("Out of range trying to access [i]th bit");
   }
 
-  int byte_pos = i / byte_bits;
-  int bit_pos = i % byte_bits;
+  const int byte_pos = i / byte_bits;
+  const int bit_pos = i % byte_bits;
 
   return (bytes.at(byte_pos) >> bit_pos) & 1UL;
+}
+
+BitArray::BitProxy BitArray::operator[](int i) {
+  if (i < 0 || i >= bits) {
+    throw std::out_of_range("Out of range trying to access [i]th bit");
+  }
+  return BitProxy(*this, i);
 }
 
 BitArray &BitArray::operator=(const BitArray &b) {
@@ -366,46 +371,89 @@ BitArray operator^(const BitArray &b1, const BitArray &b2) {
   return BitArray(b1) ^= b2;
 }
 
-BitArray::const_iterator::const_iterator(const BitArray *ba, int idx)
-    : ba(ba), idx(idx) {
-  byte = idx >= ba->bits ? 0 : ba->bytes[idx / byte_bits];
+// Proxy
+
+BitArray::BitProxy::BitProxy(BitArray &ba, int idx) : ba(ba), idx(idx) {}
+
+BitArray::BitProxy &BitArray::BitProxy::operator=(bool bit) {
+  ba.set(idx, bit);
+  return *this;
 }
 
-bool BitArray::const_iterator::operator*() { return byte & 1UL; }
+BitArray::BitProxy::operator bool() const {
+  const int byte_pos = idx / byte_bits;
+  const int bit_pos = idx % byte_bits;
+  return (ba.bytes.at(byte_pos) >> bit_pos) & 1UL;
+};
 
-BitArray::const_iterator &BitArray::const_iterator::operator++() {
+// Iterators
+
+BitArray::ConstIterator::ConstIterator(const BitArray &ba, int idx)
+    : ba(ba), idx(idx) {
+  byte = idx >= ba.bits ? 0 : ba.bytes[idx / byte_bits];
+}
+
+bool BitArray::ConstIterator::operator*() { return byte & 1UL; }
+
+BitArray::ConstIterator &BitArray::ConstIterator::operator++() {
   ++idx;
   byte >>= 1;
 
   const int bit_pos = idx % byte_bits;
   const int byte_pos = idx / byte_bits;
 
-  if (bit_pos == 0 && byte_pos < ba->bytes.size()) {
-    byte = ba->bytes[byte_pos];
+  if (bit_pos == 0 && byte_pos < ba.bytes.size()) {
+    byte = ba.bytes[byte_pos];
   }
 
   return *this;
 }
 
-BitArray::const_iterator BitArray::const_iterator::operator++(int) {
-  const_iterator temp = *this;
+BitArray::ConstIterator BitArray::ConstIterator::operator++(int) {
+  ConstIterator temp = *this;
   ++(*this);
   return temp;
 }
 
-bool BitArray::const_iterator::operator==(
-    const BitArray::const_iterator &other) const {
+bool BitArray::ConstIterator::operator==(
+    const BitArray::ConstIterator &other) const {
   return ba == other.ba && idx == other.idx;
 }
 
-bool BitArray::const_iterator::operator!=(
-    const BitArray::const_iterator &other) const {
+bool BitArray::ConstIterator::operator!=(
+    const BitArray::ConstIterator &other) const {
   return !(*this == other);
 }
 
-BitArray::const_iterator BitArray::begin() const {
-  return const_iterator(this, 0);
+BitArray::ConstIterator BitArray::begin() const {
+  return ConstIterator(*this, 0);
 };
-BitArray::const_iterator BitArray::end() const {
-  return const_iterator(this, bits);
+BitArray::ConstIterator BitArray::end() const {
+  return ConstIterator(*this, bits);
 };
+
+BitArray::Iterator::Iterator(BitArray &ba, int idx) : ba(ba), idx(idx) {};
+
+BitArray::BitProxy BitArray::Iterator::operator*() { return BitProxy(ba, idx); }
+
+BitArray::Iterator &BitArray::Iterator::operator++() {
+  idx++;
+  return *this;
+}
+
+BitArray::Iterator BitArray::Iterator::operator++(int) {
+  Iterator temp = *this;
+  ++(*this);
+  return temp;
+}
+
+bool BitArray::Iterator::operator==(const BitArray::Iterator &other) const {
+  return ba == other.ba && idx == other.idx;
+}
+
+bool BitArray::Iterator::operator!=(const BitArray::Iterator &other) const {
+  return !(*this == other);
+}
+
+BitArray::Iterator BitArray::begin() { return Iterator(*this, 0); };
+BitArray::Iterator BitArray::end() { return Iterator(*this, bits); };

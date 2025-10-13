@@ -23,6 +23,56 @@ private:
 public:
   static constexpr int byte_bits = sizeof(byte_type) * BYTE_SIZE;
 
+  // Proxy
+
+  class BitProxy {
+  private:
+    unsigned int idx;
+    BitArray &ba;
+
+  public:
+    BitProxy(BitArray &ba, int idx);
+    BitProxy &operator=(bool bit);
+    operator bool() const;
+  };
+
+  // Iterators
+
+  class ConstIterator {
+  private:
+    const BitArray &ba;
+    unsigned int idx;
+    byte_type byte;
+
+  public:
+    ConstIterator(const BitArray &ba, int idx);
+
+    bool operator*();
+
+    ConstIterator &operator++();
+    ConstIterator operator++(int);
+
+    bool operator==(const ConstIterator &other) const;
+    bool operator!=(const ConstIterator &other) const;
+  };
+
+  class Iterator {
+  private:
+    BitArray &ba;
+    unsigned int idx;
+
+  public:
+    Iterator(BitArray &ba, int idx);
+
+    BitProxy operator*();
+
+    Iterator &operator++();
+    Iterator operator++(int);
+
+    bool operator==(const Iterator &other) const;
+    bool operator!=(const Iterator &other) const;
+  };
+
   BitArray();
   ~BitArray();
 
@@ -85,6 +135,7 @@ public:
 
   // Return i'th bit value
   bool operator[](int i) const;
+  BitProxy operator[](int i);
 
   int size() const;
   bool empty() const;
@@ -92,30 +143,11 @@ public:
   // Return string representation of bit array
   std::string to_string() const;
 
-  // Iterators
+  ConstIterator begin() const;
+  ConstIterator end() const;
 
-  class const_iterator {
-  private:
-    const BitArray *ba;
-    unsigned int idx;
-    byte_type byte;
-
-  public:
-    const_iterator(const BitArray *ba, int idx);
-
-    bool operator*();
-
-    const_iterator &operator++();
-
-    const_iterator operator++(int);
-
-    bool operator==(const const_iterator &other) const;
-
-    bool operator!=(const const_iterator &other) const;
-  };
-
-  const_iterator begin() const;
-  const_iterator end() const;
+  Iterator begin();
+  Iterator end();
 };
 
 bool operator==(const BitArray &b1, const BitArray &b2);
