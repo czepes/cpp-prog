@@ -23,6 +23,7 @@ public:
 
   void render(Cells &cells, const string &name = "");
   void render(ostream &output, Cells &cells, const string &name = "");
+  void clean();
 };
 
 #endif

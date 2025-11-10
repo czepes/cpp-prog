@@ -1,4 +1,5 @@
 #include "simulator.h"
+#include <stdexcept>
 
 int norm(int v, int n) {
   while (v < 0) {
@@ -22,10 +23,10 @@ const pair<int, int> get_window_size() {
     const char *rows = getenv("LINES");
     const char *cols = getenv("COLUMNS");
     if (rows) {
-      height = atoi(rows);
+      height = stoi(rows);
     }
     if (cols) {
-      width = atoi(cols);
+      width = stoi(cols);
     }
   }
 
@@ -67,14 +68,13 @@ Simulator::Simulator() {
   window_size.first -= 4;
   cells = Cells(window_size);
 
-  // Still lifes start: 0, 0 size: 25x6
+  // Still
   put_block(cells, 0, 0);
   put_beehive(cells, 4, 0);
   put_loaf(cells, 9, 0);
   put_boat(cells, 15, 0);
-  put_tub(cells, 20, 0);
 
-  // Oscillators start: 0, 10 size: 7x35
+  // Oscillators
   put_pentadecathlon(cells, 0, 6);
   put_blinker(cells, 0, 15);
   put_toad(cells, 0, 20);
@@ -82,127 +82,132 @@ Simulator::Simulator() {
   put_pulsar(cells, 6, 16);
 
   // Spaceships
-  put_lwss(cells, 25, 0);
-  put_mwss(cells, 25, 10);
-  put_hwss(cells, 25, 20);
+  put_lwss(cells, 24, 0);
+  put_mwss(cells, 24, 10);
+  put_hwss(cells, 24, 20);
 };
 
-Simulator::Simulator(ifstream &input) {
-  string error{"Simulator parsing error:\n"};
-  string buffer;
-  int line = 0;
-
+Simulator::Simulator(ifstream &in) {
   pair<int, int> window_size = get_window_size();
   // Reserving space for simulation's name and prompt
   window_size.first -= 4;
   cells = Cells(window_size);
+  parse_lifefile(in);
+};
+
+void Simulator::parse_lifefile(ifstream &input) {
+  const string error{"Simulator parsing error\n"};
+  string buf;
+  int line = 0;
 
   // #Life 1.06
-  getline(input, buffer);
+  getline(input, buf);
   line++;
 
-  if (buffer != "#Life 1.06") {
-    throw invalid_argument((stringstream()
-                            << error << "Line " << line
-                            << ": Input file has wrong file format")
-                               .str());
+  if (buf != "#Life 1.06") {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file has wrong format");
   }
 
   // #N Simulation Name
-  getline(input, buffer);
+  getline(input, buf);
   line++;
 
-  if (buffer.empty() || buffer.find("#N ") == string::npos) {
-    throw invalid_argument((stringstream() << error << "Line " << line
-                                           << ": Input file has wrong name")
-                               .str());
+  if (buf.empty() || buf.find("#N ") == string::npos) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file has wrong name");
   }
-  name = buffer.substr(3, buffer.length() - 3);
+  name = buf.substr(3, buf.length() - 3);
 
   // #R B{0-8}/S{0-8}
-  getline(input, buffer);
+  getline(input, buf);
   line++;
 
-  if (buffer.empty() || buffer.find("#R ") == string::npos ||
-      buffer.find("B") == string::npos || buffer.find("S") == string::npos) {
-    throw invalid_argument((stringstream() << error << "Line " << line
-                                           << ": Input file has wrong rules")
-                               .str());
+  if (buf.empty()) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file is missing rules");
+  }
+  if (buf.find("#R ") == string::npos) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file has wrong rules format");
+  }
+  if (buf.find("B") == string::npos) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file is missing birth rules");
+  }
+  if (buf.find("S") == string::npos) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Input file is missing survival rules");
   }
 
-  stringstream rules(buffer.substr(3, buffer.length() - 3), ios_base::in);
+  stringstream rules(buf.substr(3, buf.length() - 3), ios_base::in);
 
-  while (getline(rules, buffer, '\\')) {
-    if (buffer.empty()) {
-      throw invalid_argument((stringstream() << error << "Line " << line
-                                             << ": Missing rule values")
-                                 .str());
+  while (getline(rules, buf, '\\')) {
+    if (buf.empty()) {
+      throw invalid_argument(error + "Line " + to_string(line) +
+                             ": Missing rule values");
     }
 
-    char rule = buffer[0];
-    string allowed = "12345678";
+    const string allowed = "12345678";
+    char rule = buf[0];
 
     switch (rule) {
     case 'B':
-      birth_rule = buffer.substr(1, buffer.length() - 1);
+      birth_rule = buf.substr(1, buf.length() - 1);
       for (const char c : birth_rule) {
         if (allowed.find(c) == string::npos) {
-          throw invalid_argument((stringstream() << error << "Line " << line
-                                                 << ": Wrong rule value " << c)
-                                     .str());
+          throw invalid_argument(error + "Line " + to_string(line) +
+                                 ": Wrong rule value " + c);
         }
       }
       break;
     case 'S':
-      survival_rule = buffer.substr(1, buffer.length() - 1);
+      survival_rule = buf.substr(1, buf.length() - 1);
       for (const char c : survival_rule) {
         if (allowed.find(c) == string::npos) {
-          throw invalid_argument((stringstream() << error << "Line " << line
-                                                 << ": Wrong rule value " << c)
-                                     .str());
+          throw invalid_argument(error + "Line " + to_string(line) +
+                                 ": Wrong rule value " + c);
         }
       }
       break;
     default:
-      throw invalid_argument((stringstream() << error << "Line " << line
-                                             << ": Wrong rule " << rule)
-                                 .str());
+      throw invalid_argument(error + "Line " + to_string(line) +
+                             ": Wrong rule " + rule);
     }
   }
 
-  if (birth_rule.empty() || survival_rule.empty()) {
-    throw invalid_argument(
-        (stringstream() << error << "Line " << line << "Missing rule values")
-            .str());
+  if (birth_rule.empty()) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Missing birth rule values");
+  }
+
+  if (survival_rule.empty()) {
+    throw invalid_argument(error + "Line " + to_string(line) +
+                           ": Missing survival rule values");
   }
 
   // x y
   int x, y;
-  string x_str, y_str;
-  while (getline(input, buffer)) {
+  while (getline(input, buf)) {
     line++;
 
-    stringstream coords(buffer, ios_base::in);
+    stringstream coords(buf, ios_base::in);
 
     coords >> x;
     if (coords.fail()) {
-      throw invalid_argument((stringstream()
-                              << error << "Line " << line
-                              << ": Wrong coordinates " << buffer)
-                                 .str());
+      throw invalid_argument(error + "Line " + to_string(line) +
+                             ": Wrong coordinates " + buf);
     }
 
     coords >> y;
     if (coords.fail()) {
-      throw invalid_argument((stringstream()
-                              << error << "Line " << line
-                              << ": Wrong coordinates " << buffer)
-                                 .str());
+      throw invalid_argument(error + "Line " + to_string(line) +
+                             ": Wrong coordinates " + buf);
     }
 
     cells[y][x] = true;
   }
-};
+}
 
 int Simulator::count_neighbours(int y, int x) {
   int count = 0;
@@ -222,8 +227,9 @@ int Simulator::count_neighbours(int y, int x) {
 }
 
 void Simulator::live(int n) {
-  while (n-- > 0) {
+  while (n > 0) {
     live();
+    n--;
   }
 }
 void Simulator::live() {

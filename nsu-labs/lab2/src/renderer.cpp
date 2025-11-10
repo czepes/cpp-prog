@@ -25,3 +25,9 @@ void Renderer::render(std::ostream &output, Cells &cells,
     output << endl;
   }
 }
+
+void Renderer::clean() {
+  // cout << "\033[2J\033[H";
+  // cout << "\033[38A";
+  system("clear");
+}

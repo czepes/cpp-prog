@@ -12,7 +12,12 @@ int main(int argc, char **argv) {
   ifstream input;
   ofstream output;
 
-  parser.parse();
+  try {
+    parser.parse();
+  } catch (const exception &e) {
+    cerr << e.what();
+    return 1;
+  }
   parser.get(&infile, &outfile, &iterations);
 
   if (!infile.empty()) {
@@ -45,7 +50,7 @@ int main(int argc, char **argv) {
   if (input.is_open()) {
     try {
       sim = new Simulator(input);
-    } catch (exception &e) {
+    } catch (const exception &e) {
       cerr << e.what() << endl;
 
       input.close();
@@ -65,7 +70,8 @@ int main(int argc, char **argv) {
     ren = new Renderer(sim->get_size());
   }
 
-  if (iterations == 0 && outfile.empty()) {
+  if (outfile.empty()) {
+    sim->live(iterations);
     Controller ctr(*sim, *ren);
     ctr.start();
   } else {

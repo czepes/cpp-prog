@@ -23,12 +23,7 @@ add_library(controller ./src/controller.cpp ./src/controller.h)
 add_library(simulator ./src/simulator.cpp ./src/simulator.h)
 add_library(parser ./src/parser.cpp ./src/parser.h)
 
-add_executable(rensim ./src/rensim.cpp)
-add_executable(par ./src/par.cpp)
 add_executable(game ./src/game.cpp)
-
-target_link_libraries(rensim renderer simulator)
-target_link_libraries(par parser)
 target_link_libraries(game parser renderer simulator controller)
 
 # target_link_libraries(bitarraytest GTest::gtest_main bitarray gcov)

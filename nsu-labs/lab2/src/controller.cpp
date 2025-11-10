@@ -13,133 +13,96 @@ void Controller::help() {
 
 Controller::Controller(Simulator &sim, Renderer &ren) : sim(sim), ren(ren) {};
 
-void Controller::clean() {
-  // cout << "\033[2J\033[H";
-  // cout << "\033[38A";
-  system("clear");
-}
+bool Controller::handle_tick(string &ticks) {
+  int n{1};
 
-bool Controller::handle_tick(string &input, int *n, string &statusline) {
-
-  stringstream ss(input);
-  string buf;
-
-  ss >> buf;
-
-  if (buf != "tick") {
-    statusline = "Unknown command " + input;
-    return false;
-  }
-
-  if (ss.eof()) {
-    statusline = "Missing value";
-    return false;
-  }
-
-  ss >> buf;
-
-  // TODO: handle tick<space>
-  if (buf.empty() || buf == "tick") {
-    statusline = "Missing value";
-    return false;
+  if (ticks.empty()) {
+    sim.live(n);
+    statusline = "Lived for " + to_string(n) + " iteration(s)";
+    return true;
   }
 
   try {
-    *n = stoi(buf);
+    n = stoi(ticks);
   } catch (const invalid_argument &e) {
-    statusline = "Wrong value " + buf;
+    statusline = "Wrong value " + ticks;
     return false;
   } catch (const out_of_range &e) {
-    statusline = "Value " + buf + " is too large";
+    statusline = "Value " + ticks + " is too large";
     return false;
   }
 
-  if ((*n) < 0) {
+  if (n < 0) {
     statusline = "Value is negative";
     return false;
   }
 
+  sim.live(n);
+  statusline = "Lived for " + to_string(n) + " iteration(s)";
+
   return true;
 }
 
-bool Controller::handle_dump(string &input, string &statusline) {
-  stringstream ss(input);
-  string buf;
-
-  ss >> buf;
-
-  if (buf != "dump") {
-    statusline = "Unknown command " + input;
+bool Controller::handle_dump(string &file) {
+  if (file.empty()) {
+    statusline = "No file given";
     return false;
   }
 
-  // TODO: handle dump<space>
-  if (ss.eof()) {
-    statusline = "Missing filename";
-    return false;
-  }
-
-  ss >> buf;
-  ofstream output(buf);
+  ofstream output(file);
 
   if (output.fail() || !output.is_open()) {
-    statusline = "Failed to open file " + buf;
+    statusline = "Failed to open file " + file;
     return false;
   }
 
   ren.render(output, sim.get_cells(), sim.get_name());
-  statusline = "Dumped to " + buf;
+  statusline = "Dumped to " + file;
 
   output.close();
   return true;
 }
 
-void Controller::start() {
-  // TODO: interactive mode:
-  //  1. read user's input commands
-  //  2. handle these commands
-  //  3. handle wrong input
-  //  4. Options:
-  //    [x] tick <n=1>      - live <n> iteration
-  //    [x] dump <filename> - save to <filename>
-  //    [o] quit
-  //    [o] help
-  string input;
-  string prompt{"$ "};
-  string commands{"help | tick <n=1> | dump <filename> | quit"};
-  string statusline{commands};
+bool Controller::handle_input(string &input) {
+  string command;
+  string value;
+  stringstream ss(input);
+  ss >> command;
+  ss >> value;
 
-  while (true) {
-    clean();
+  if (command == "help") {
+    ren.clean();
+    help();
+    cout << prompt;
+    getline(cin, input);
+    statusline = commands;
+  } else if (command == "tick") {
+    handle_tick(value);
+  } else if (command == "dump") {
+    handle_dump(value);
+  } else if (command == "quit" || command == "exit") {
+    return false;
+  } else {
+    statusline = "Unknown command: " + input;
+  }
+
+  return true;
+}
+
+void Controller::start() {
+  string input;
+  bool running{true};
+
+  statusline = commands;
+
+  while (running) {
+    ren.clean();
     ren.render(cout, sim.get_cells(), sim.get_name());
 
     cout << statusline << endl;
     cout << prompt;
     getline(cin, input);
 
-    if (input == "help") {
-      clean();
-      help();
-      cout << prompt;
-      getline(cin, input);
-      statusline = commands;
-    } else if (input.find("tick") == 0) {
-      int n{1};
-
-      if (input != "tick" && !handle_tick(input, &n, statusline)) {
-        continue;
-      }
-
-      sim.live(n);
-      statusline = "Lived for " + to_string(n) + " iteration(s)";
-    } else if (input.find("dump") == 0) {
-      handle_dump(input, statusline);
-    } else if (input == "quit" || input == "exit") {
-      break;
-    } else if (input.empty()) {
-      continue;
-    } else {
-      statusline = "Unknown command: " + input;
-    }
+    running = handle_input(input);
   }
 }

@@ -1,28 +1,23 @@
 #include "parser.h"
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 
 void ArgParser::help() {
-  std::cout << "Game of life program" << std::endl
-            << "/path/to/prog$ program" << std::endl
-            << "    [-i infile | --input=file]" << std::endl
-            << "    [-o outfile | --output=file]" << std::endl
-            << "    [-n int | --iterations=int]" << std::endl
-            << "    [-h | --help]" << std::endl;
+  cout << "Game of life program" << endl
+       << "/path/to/prog$ program" << endl
+       << "    [-i infile | --input=file]" << endl
+       << "    [-o outfile | --output=file]" << endl
+       << "    [-n int | --iterations=int]" << endl
+       << "    [-h | --help]" << endl;
 }
 
 const ArgParser &ArgParser::parse() {
   for (int i = 1; i < argc; i++) {
     string arg(argv[i]);
+    string missing_value{"Missing value for " + arg};
+    string unknown_argument{"Unknown argument " + arg};
 
-    auto what{(stringstream() << "Missing value for " << arg)};
-    string missing_value =
-        (stringstream() << "Missing value for " << arg).str();
-    string unknown_argument =
-        (stringstream() << "Unknown agurment " << arg).str();
-
-    if (arg.find("--") != string::npos) {
+    if (arg.find("--") == 0) {
       if (arg == "--help") {
         help();
         continue;
@@ -34,38 +29,31 @@ const ArgParser &ArgParser::parse() {
 
       if (option == "iterations") {
         if (delim_pos == string::npos || delim_pos == arg.length() - 1) {
-          cerr << missing_value << endl;
           throw invalid_argument(missing_value);
         }
         try {
           iterations = stoi(value);
-        } catch (std::invalid_argument e) {
-          cerr << "Could not convert " << value << " to int" << endl;
-          throw e;
-        } catch (std::out_of_range e) {
-          cerr << "Value " << value << " is too big" << endl;
-          throw e;
+        } catch (invalid_argument e) {
+          throw invalid_argument("Could not convert " + value + " to int");
+        } catch (out_of_range e) {
+          throw out_of_range("Value " + value + " is too big");
         }
       } else if (option == "input") {
         if (delim_pos == string::npos || delim_pos == arg.length() - 1) {
-          cerr << missing_value << endl;
           throw invalid_argument(missing_value);
         }
         infile = value;
       } else if (option == "output") {
         if (delim_pos == string::npos || delim_pos == arg.length() - 1) {
-          cerr << missing_value << endl;
           throw invalid_argument(missing_value);
         }
         outfile = value;
       } else {
-        cerr << unknown_argument << endl;
         throw invalid_argument(unknown_argument);
       }
     } else if (arg.find("-") != string::npos) {
 
       if (arg.length() != 2) {
-        cerr << unknown_argument << endl;
         throw invalid_argument(unknown_argument);
       }
 
@@ -75,7 +63,6 @@ const ArgParser &ArgParser::parse() {
       }
 
       if (i == argc - 1) {
-        cerr << missing_value << endl;
         throw invalid_argument(missing_value);
       }
 
@@ -85,22 +72,18 @@ const ArgParser &ArgParser::parse() {
         try {
           iterations = stoi(value);
         } catch (invalid_argument e) {
-          cerr << "Could not convert " << value << " to int" << endl;
-          throw e;
+          throw invalid_argument("Could not convert " + value + " to int");
         } catch (out_of_range e) {
-          cerr << "Value " << value << " is too big" << endl;
-          throw e;
+          throw out_of_range("Value " + value + " is too big");
         }
       } else if (arg == "-i") {
         infile = value;
       } else if (arg == "-o") {
         outfile = value;
       } else {
-        cerr << unknown_argument << endl;
         throw invalid_argument(unknown_argument);
       }
     } else {
-      cerr << unknown_argument << endl;
       throw invalid_argument(unknown_argument);
     }
   }
@@ -108,8 +91,7 @@ const ArgParser &ArgParser::parse() {
   return *this;
 }
 
-const ArgParser &ArgParser::get(std::string *infile, std::string *outfile,
-                                int *i) const {
+const ArgParser &ArgParser::get(string *infile, string *outfile, int *i) const {
   *infile = this->infile;
   *outfile = this->outfile;
   *i = this->iterations;
