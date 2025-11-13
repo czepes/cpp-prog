@@ -13,7 +13,7 @@ void Controller::help() {
 
 Controller::Controller(Simulator &sim, Renderer &ren) : sim(sim), ren(ren) {};
 
-bool Controller::handle_tick(string &ticks) {
+bool Controller::handle_tick(string ticks) {
   int n{1};
 
   if (ticks.empty()) {
@@ -82,6 +82,9 @@ bool Controller::handle_input(string &input) {
     handle_dump(value);
   } else if (command == "quit" || command == "exit") {
     return false;
+  } else if (input.empty()) {
+    statusline = commands;
+    return true;
   } else {
     statusline = "Unknown command: " + input;
   }
@@ -101,6 +104,7 @@ void Controller::start() {
 
     cout << statusline << endl;
     cout << prompt;
+
     getline(cin, input);
 
     running = handle_input(input);

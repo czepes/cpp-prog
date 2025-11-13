@@ -52,42 +52,37 @@ public:
 
 class Simulator {
 private:
-  string name;
-  string survival_rule;
-  string birth_rule;
+  string name{"Conway's Game of Life"};
+  string survival_rule{"23"};
+  string birth_rule{"3"};
   Cells cells;
 
-  void parse_lifefile(ifstream &in);
+  void parse_lif(ifstream &in);
+  void generate_cells();
+  void generate_cells(const pair<int, int> size);
+
   int count_neighbours(int y, int x);
+  bool check_rule(const string &values);
 
 public:
   Simulator();
   Simulator(ifstream &in);
+  Simulator(const pair<int, int> size);
+  Simulator(const pair<int, int> size, ifstream &in);
 
-  int get_height() const;
-  int get_width() const;
   const pair<int, int> get_size() const;
 
   void live(int n);
   void live();
 
-  const string get_name() const;
+  string get_name() const;
+  string get_survival_rule() const;
+  string get_birth_rule() const;
   Cells &get_cells();
-};
 
-void put_block(Cells &cells, int y, int x);
-void put_beehive(Cells &cells, int y, int x);
-void put_loaf(Cells &cells, int y, int x);
-void put_boat(Cells &cells, int y, int x);
-void put_tub(Cells &cells, int y, int x);
-void put_blinker(Cells &cells, int y, int x);
-void put_toad(Cells &cells, int y, int x);
-void put_beacon(Cells &cells, int y, int x);
-void put_pulsar(Cells &cells, int y, int x);
-void put_pentadecathlon(Cells &cells, int y, int x);
-void put_glider(Cells &cells, int y, int x);
-void put_lwss(Cells &cells, int y, int x);
-void put_mwss(Cells &cells, int y, int x);
-void put_hwss(Cells &cells, int y, int x);
+  void set_name(string name);
+  void set_survival_rule(string rule);
+  void set_birth_rule(string rule);
+};
 
 #endif

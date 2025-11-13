@@ -1,5 +1,8 @@
 #include "simulator.h"
+#include "patterns.h"
 #include <stdexcept>
+
+// Functions
 
 int norm(int v, int n) {
   while (v < 0) {
@@ -40,6 +43,8 @@ const pair<int, int> get_window_size() {
   return pair(height, width);
 }
 
+// Cells
+
 Cell::operator bool() const { return (*ptr)[y][x]; }
 Cell &Cell::operator=(bool alive) {
   (*ptr)[y][x] = alive;
@@ -50,52 +55,64 @@ Cell CellsRow::operator[](int x) {
   return Cell(ptr, y, norm(x, (*ptr)[y].size()));
 };
 
-Cells ::Cells() : size(pair(0, 0)) {};
+Cells::Cells() : size(pair(0, 0)) {};
 Cells::Cells(const pair<int, int> size) : size(size) {
   matrix = vector(size.first, vector(size.second, false));
 }
 CellsRow Cells::operator[](int y) {
-  return CellsRow(&matrix, norm(y, matrix.size()));
+  return CellsRow(&matrix, norm(y, size.first));
 };
 
+// Simulator
+
 Simulator::Simulator() {
-  name = "Conway's Game of Life";
-  birth_rule = "3";
-  survival_rule = "23";
-
-  pair<int, int> window_size = get_window_size();
-  // Reserving space for simulation's name and prompt
-  window_size.first -= 4;
-  cells = Cells(window_size);
-
-  // Still
-  put_block(cells, 0, 0);
-  put_beehive(cells, 4, 0);
-  put_loaf(cells, 9, 0);
-  put_boat(cells, 15, 0);
-
-  // Oscillators
-  put_pentadecathlon(cells, 0, 6);
-  put_blinker(cells, 0, 15);
-  put_toad(cells, 0, 20);
-  put_beacon(cells, 0, 26);
-  put_pulsar(cells, 6, 16);
-
-  // Spaceships
-  put_lwss(cells, 24, 0);
-  put_mwss(cells, 24, 10);
-  put_hwss(cells, 24, 20);
+  generate_cells();
+  if (put_glider_gun(cells, 0, 0)) {
+    return;
+  } else {
+    put_lwss(cells, 0, 0);
+    put_mwss(cells, 0, 10);
+    put_hwss(cells, 0, 20);
+  }
 };
 
 Simulator::Simulator(ifstream &in) {
+  generate_cells();
+  parse_lif(in);
+};
+
+Simulator::Simulator(const pair<int, int> size) { generate_cells(size); }
+
+Simulator::Simulator(const pair<int, int> size, ifstream &in) {
+  generate_cells(size);
+  parse_lif(in);
+}
+
+void Simulator::generate_cells() {
   pair<int, int> window_size = get_window_size();
   // Reserving space for simulation's name and prompt
   window_size.first -= 4;
   cells = Cells(window_size);
-  parse_lifefile(in);
-};
+}
 
-void Simulator::parse_lifefile(ifstream &input) {
+void Simulator::generate_cells(const pair<int, int> size) {
+  cells = Cells(size);
+}
+
+bool Simulator::check_rule(const string &values) {
+  const string allowed{"12345678"};
+
+  for (const char num : values) {
+    if (allowed.find(num) == string::npos) {
+      return false;
+    }
+  }
+
+  // If values are empty, returns true!
+  return true;
+}
+
+void Simulator::parse_lif(ifstream &input) {
   const string error{"Simulator parsing error\n"};
   string buf;
   int line = 0;
@@ -145,29 +162,27 @@ void Simulator::parse_lifefile(ifstream &input) {
   while (getline(rules, buf, '\\')) {
     if (buf.empty()) {
       throw invalid_argument(error + "Line " + to_string(line) +
-                             ": Missing rule values");
+                             ": Missing rule literals");
     }
 
-    const string allowed = "12345678";
     char rule = buf[0];
+    string values = buf.substr(1, buf.length() - 1);
 
     switch (rule) {
     case 'B':
-      birth_rule = buf.substr(1, buf.length() - 1);
-      for (const char c : birth_rule) {
-        if (allowed.find(c) == string::npos) {
-          throw invalid_argument(error + "Line " + to_string(line) +
-                                 ": Wrong rule value " + c);
-        }
+      if (check_rule(values)) {
+        birth_rule = values;
+      } else {
+        throw invalid_argument(error + "Line " + to_string(line) +
+                               ": Wrong birth rule values " + values);
       }
       break;
     case 'S':
-      survival_rule = buf.substr(1, buf.length() - 1);
-      for (const char c : survival_rule) {
-        if (allowed.find(c) == string::npos) {
-          throw invalid_argument(error + "Line " + to_string(line) +
-                                 ": Wrong rule value " + c);
-        }
+      if (check_rule(values)) {
+        survival_rule = values;
+      } else {
+        throw invalid_argument(error + "Line " + to_string(line) +
+                               ": Wrong survival rule values " + values);
       }
       break;
     default:
@@ -176,17 +191,8 @@ void Simulator::parse_lifefile(ifstream &input) {
     }
   }
 
-  if (birth_rule.empty()) {
-    throw invalid_argument(error + "Line " + to_string(line) +
-                           ": Missing birth rule values");
-  }
-
-  if (survival_rule.empty()) {
-    throw invalid_argument(error + "Line " + to_string(line) +
-                           ": Missing survival rule values");
-  }
-
   // x y
+  bool empty{true};
   int x, y;
   while (getline(input, buf)) {
     line++;
@@ -206,6 +212,11 @@ void Simulator::parse_lifefile(ifstream &input) {
     }
 
     cells[y][x] = true;
+    empty = false;
+  }
+
+  if (empty) {
+    throw invalid_argument(error + "EOF: Missing coordinates");
   }
 }
 
@@ -252,256 +263,23 @@ void Simulator::live() {
   cells = new_cells;
 }
 
-int Simulator::get_height() const { return cells.size.first; }
-int Simulator::get_width() const { return cells.size.second; }
 const pair<int, int> Simulator::get_size() const { return cells.size; }
 
-const string Simulator::get_name() const { return name; };
+string Simulator::get_name() const { return name; };
+string Simulator::get_birth_rule() const { return birth_rule; };
+string Simulator::get_survival_rule() const { return survival_rule; };
 Cells &Simulator::get_cells() { return cells; }
 
-void put_block(Cells &cells, int y, int x) {
-  if (cells.size.first < 4 || cells.size.second < 4) {
-    return;
-  }
+void Simulator::set_name(string name) {}
 
-  cells[y + 1][x + 1] = true;
-  cells[y + 1][x + 2] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 2] = true;
+void Simulator::set_birth_rule(string rule) {
+  if (check_rule(rule)) {
+    birth_rule = rule;
+  }
 }
 
-void put_beehive(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 6) {
-    return;
+void Simulator::set_survival_rule(string rule) {
+  if (check_rule(rule)) {
+    survival_rule = rule;
   }
-
-  cells[y + 1][x + 2] = true;
-  cells[y + 1][x + 3] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 4] = true;
-  cells[y + 3][x + 2] = true;
-  cells[y + 3][x + 3] = true;
-}
-
-void put_loaf(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
-    return;
-  }
-
-  cells[y + 1][x + 2] = true;
-  cells[y + 1][x + 3] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 4] = true;
-  cells[y + 3][x + 2] = true;
-  cells[y + 3][x + 4] = true;
-  cells[y + 4][x + 3] = true;
-}
-
-void put_boat(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
-    return;
-  }
-
-  cells[y + 1][x + 1] = true;
-  cells[y + 1][x + 2] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 3] = true;
-  cells[y + 3][x + 2] = true;
-}
-
-void put_tub(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
-    return;
-  }
-
-  cells[y + 1][x + 2] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 3] = true;
-  cells[y + 3][x + 2] = true;
-}
-
-void put_blinker(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
-    return;
-  }
-
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 2] = true;
-  cells[y + 2][x + 3] = true;
-}
-
-void put_toad(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
-    return;
-  }
-
-  cells[y + 2][x + 2] = true;
-  cells[y + 2][x + 3] = true;
-  cells[y + 2][x + 4] = true;
-  cells[y + 3][x + 1] = true;
-  cells[y + 3][x + 2] = true;
-  cells[y + 3][x + 3] = true;
-}
-
-void put_beacon(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
-    return;
-  }
-
-  cells[y + 1][x + 1] = true;
-  cells[y + 1][x + 2] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 2] = true;
-  cells[y + 3][x + 3] = true;
-  cells[y + 3][x + 4] = true;
-  cells[y + 4][x + 3] = true;
-  cells[y + 4][x + 4] = true;
-}
-
-void put_pulsar(Cells &cells, int y, int x) {
-  if (cells.size.first < 17 || cells.size.second < 17) {
-    return;
-  }
-
-  cells[y + 2][x + 4] = true;
-  cells[y + 2][x + 5] = true;
-  cells[y + 2][x + 6] = true;
-  cells[y + 2][x + 10] = true;
-  cells[y + 2][x + 11] = true;
-  cells[y + 2][x + 12] = true;
-
-  cells[y + 4][x + 2] = true;
-  cells[y + 4][x + 7] = true;
-  cells[y + 4][x + 9] = true;
-  cells[y + 4][x + 14] = true;
-
-  cells[y + 5][x + 2] = true;
-  cells[y + 5][x + 7] = true;
-  cells[y + 5][x + 9] = true;
-  cells[y + 5][x + 14] = true;
-
-  cells[y + 6][x + 2] = true;
-  cells[y + 6][x + 7] = true;
-  cells[y + 6][x + 9] = true;
-  cells[y + 6][x + 14] = true;
-
-  cells[y + 7][x + 4] = true;
-  cells[y + 7][x + 5] = true;
-  cells[y + 7][x + 6] = true;
-  cells[y + 7][x + 10] = true;
-  cells[y + 7][x + 11] = true;
-  cells[y + 7][x + 12] = true;
-
-  cells[y + 9][x + 4] = true;
-  cells[y + 9][x + 5] = true;
-  cells[y + 9][x + 6] = true;
-  cells[y + 9][x + 10] = true;
-  cells[y + 9][x + 11] = true;
-  cells[y + 9][x + 12] = true;
-
-  cells[y + 10][x + 2] = true;
-  cells[y + 10][x + 7] = true;
-  cells[y + 10][x + 9] = true;
-  cells[y + 10][x + 14] = true;
-
-  cells[y + 11][x + 2] = true;
-  cells[y + 11][x + 7] = true;
-  cells[y + 11][x + 9] = true;
-  cells[y + 11][x + 14] = true;
-
-  cells[y + 12][x + 2] = true;
-  cells[y + 12][x + 7] = true;
-  cells[y + 12][x + 9] = true;
-  cells[y + 12][x + 14] = true;
-
-  cells[y + 14][x + 4] = true;
-  cells[y + 14][x + 5] = true;
-  cells[y + 14][x + 6] = true;
-  cells[y + 14][x + 10] = true;
-  cells[y + 14][x + 11] = true;
-  cells[y + 14][x + 12] = true;
-}
-
-void put_pentadecathlon(Cells &cells, int y, int x) {
-  if (cells.size.first < 18 || cells.size.second < 11) {
-    return;
-  }
-
-  cells[y + 4][x + 5] = true;
-  cells[y + 5][x + 5] = true;
-  cells[y + 6][x + 4] = true;
-  cells[y + 6][x + 6] = true;
-  cells[y + 7][x + 5] = true;
-  cells[y + 8][x + 5] = true;
-  cells[y + 9][x + 5] = true;
-  cells[y + 10][x + 5] = true;
-  cells[y + 11][x + 4] = true;
-  cells[y + 11][x + 6] = true;
-  cells[y + 12][x + 5] = true;
-  cells[y + 13][x + 5] = true;
-}
-
-void put_glider(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
-    return;
-  }
-
-  cells[y + 1][x + 3] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 3] = true;
-  cells[y + 3][x + 2] = true;
-  cells[y + 3][x + 3] = true;
-}
-void put_lwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 7) {
-    return;
-  }
-
-  cells[y + 1][x + 1] = true;
-  cells[y + 1][x + 4] = true;
-  cells[y + 2][x + 5] = true;
-  cells[y + 3][x + 1] = true;
-  cells[y + 3][x + 5] = true;
-  cells[y + 4][x + 2] = true;
-  cells[y + 4][x + 3] = true;
-  cells[y + 4][x + 4] = true;
-  cells[y + 4][x + 5] = true;
-}
-
-void put_mwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 7 || cells.size.second < 8) {
-    return;
-  }
-
-  cells[y + 1][x + 3] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 5] = true;
-  cells[y + 3][x + 6] = true;
-  cells[y + 4][x + 1] = true;
-  cells[y + 4][x + 6] = true;
-  cells[y + 5][x + 2] = true;
-  cells[y + 5][x + 3] = true;
-  cells[y + 5][x + 4] = true;
-  cells[y + 5][x + 5] = true;
-  cells[y + 5][x + 6] = true;
-}
-
-void put_hwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 7 || cells.size.second < 9) {
-    return;
-  }
-
-  cells[y + 1][x + 3] = true;
-  cells[y + 1][x + 4] = true;
-  cells[y + 2][x + 1] = true;
-  cells[y + 2][x + 6] = true;
-  cells[y + 3][x + 7] = true;
-  cells[y + 4][x + 1] = true;
-  cells[y + 4][x + 7] = true;
-  cells[y + 5][x + 2] = true;
-  cells[y + 5][x + 3] = true;
-  cells[y + 5][x + 4] = true;
-  cells[y + 5][x + 5] = true;
-  cells[y + 5][x + 6] = true;
-  cells[y + 5][x + 7] = true;
 }

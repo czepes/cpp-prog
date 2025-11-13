@@ -13,7 +13,7 @@ using namespace std;
 
 class Renderer {
 private:
-  const vector<char> graphics{'.', 'O'};
+  const vector<char> graphics{' ', 'O'};
   const pair<int, int> size;
   ostream &canvas;
 

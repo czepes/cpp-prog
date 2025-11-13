@@ -16,7 +16,7 @@ private:
   string statusline;
 
   bool handle_dump(string &file);
-  bool handle_tick(string &ticks);
+  bool handle_tick(string ticks = "");
   bool handle_input(string &input);
 
   static void help();
