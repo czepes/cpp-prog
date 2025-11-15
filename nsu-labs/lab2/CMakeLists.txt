@@ -36,9 +36,10 @@ add_custom_target(
   gcovr
   COMMAND make gametest
   COMMAND ${CMAKE_BINARY_DIR}/gametest
-  COMMAND gcovr -r ${PROJECT_SOURCE_DIR} --html-details gcovr.html --txt
+  COMMAND gcovr -r ${PROJECT_SOURCE_DIR} --html-details gcovr.html --txt --merge-mode-functions=separate
   COMMAND echo
           "Detailed coverage report generated in ${CMAKE_BINARY_DIR}/gcovr.html"
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
 add_custom_target(

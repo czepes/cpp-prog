@@ -56,7 +56,7 @@ bool Controller::handle_dump(string &file) {
     return false;
   }
 
-  ren.render(output, sim.get_cells(), sim.get_name());
+  ren.render(output, sim.get_name());
   statusline = "Dumped to " + file;
 
   output.close();
@@ -100,7 +100,7 @@ void Controller::start() {
 
   while (running) {
     ren.clean();
-    ren.render(cout, sim.get_cells(), sim.get_name());
+    ren.render(cout, sim.get_name());
 
     cout << statusline << endl;
     cout << prompt;

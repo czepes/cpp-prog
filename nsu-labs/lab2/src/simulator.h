@@ -6,16 +6,21 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <sys/ioctl.h>
-#include <unistd.h>
 #include <vector>
 
+#ifdef _WIN32
+#include "windows.h"
+#else
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
+
 using namespace std;
+using celrow = vector<bool>;
+using celmat = vector<celrow>;
 
 int norm(int v, int n);
 const pair<int, int> get_window_size();
-
-using celmat = vector<vector<bool>>;
 
 class Cell {
 private:
@@ -23,7 +28,7 @@ private:
   int y, x;
 
 public:
-  Cell(vector<vector<bool>> *ptr, int y, int x) : ptr(ptr), y(y), x(x) {};
+  Cell(celmat *ptr, int y, int x) : ptr(ptr), y(y), x(x) {};
   operator bool() const;
   Cell &operator=(bool alive);
 };
@@ -34,20 +39,63 @@ private:
   int y;
 
 public:
-  CellsRow(vector<vector<bool>> *ptr, int y) : ptr(ptr), y(y) {};
+  CellsRow(celmat *ptr, int y) : ptr(ptr), y(y) {};
   Cell operator[](int x);
+
+  using iterator = celrow::iterator;
+  using const_iterator = celrow::const_iterator;
+
+  iterator begin() { return (*ptr)[y].begin(); };
+  iterator end() { return (*ptr)[y].end(); };
+  const_iterator begin() const { return (*ptr)[y].begin(); };
+  const_iterator end() const { return (*ptr)[y].end(); };
+  const_iterator cbegin() const { return (*ptr)[y].cbegin(); };
+  const_iterator cend() const { return (*ptr)[y].cend(); };
+};
+
+class ConstCell {
+private:
+  const celmat *ptr;
+  int y, x;
+
+public:
+  ConstCell(const celmat *ptr, int y, int x) : ptr(ptr), y(y), x(x) {};
+  operator bool() const;
+  ConstCell &operator=(bool alive);
+};
+
+class ConstCellsRow {
+private:
+  const celmat *ptr;
+  int y;
+
+public:
+  ConstCellsRow(const celmat *ptr, int y) : ptr(ptr), y(y) {};
+  ConstCell operator[](int x);
 };
 
 class Cells {
 private:
   celmat matrix;
-
-public:
   pair<int, int> size;
 
+public:
   Cells();
   Cells(const pair<int, int> size);
   CellsRow operator[](int y);
+  ConstCellsRow operator[](int y) const;
+
+  const pair<int, int> get_size() const;
+
+  using iterator = celmat::iterator;
+  using const_iterator = celmat::const_iterator;
+
+  iterator begin() { return matrix.begin(); };
+  iterator end() { return matrix.end(); };
+  const_iterator begin() const { return matrix.begin(); };
+  const_iterator end() const { return matrix.end(); };
+  const_iterator cbegin() const { return matrix.cbegin(); };
+  const_iterator cend() const { return matrix.cend(); };
 };
 
 class Simulator {
@@ -65,12 +113,10 @@ private:
   bool check_rule(const string &values);
 
 public:
-  Simulator();
+  Simulator(bool fill = false);
   Simulator(ifstream &in);
   Simulator(const pair<int, int> size);
   Simulator(const pair<int, int> size, ifstream &in);
-
-  const pair<int, int> get_size() const;
 
   void live(int n);
   void live();

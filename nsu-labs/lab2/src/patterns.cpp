@@ -1,7 +1,8 @@
 #include "patterns.h"
 
 bool put_cell(Cells &cells, int y, int x) {
-  if (cells.size.first == 0 || cells.size.second == 0) {
+  pair<int, int> size = cells.get_size();
+  if (size.first == 0 || size.second == 0) {
     return false;
   }
 
@@ -9,8 +10,10 @@ bool put_cell(Cells &cells, int y, int x) {
 
   return true;
 }
+
 bool put_block(Cells &cells, int y, int x, int height, int width, bool fill) {
-  if (cells.size.first < height || cells.size.second < width) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < height || size.second < width) {
     return false;
   }
 
@@ -25,7 +28,8 @@ bool put_block(Cells &cells, int y, int x, int height, int width, bool fill) {
 }
 
 bool find_block(Cells &cells, int y, int x, int height, int width, bool fill) {
-  if (cells.size.first < height || cells.size.second < width) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < height || size.second < width) {
     return false;
   }
 
@@ -43,7 +47,8 @@ bool find_block(Cells &cells, int y, int x, int height, int width, bool fill) {
 }
 
 bool put_beehive(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 6) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 5 || size.second < 6) {
     return false;
   }
 
@@ -58,7 +63,8 @@ bool put_beehive(Cells &cells, int y, int x) {
 }
 
 bool put_loaf(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 6 || size.second < 6) {
     return false;
   }
 
@@ -74,7 +80,8 @@ bool put_loaf(Cells &cells, int y, int x) {
 }
 
 bool put_boat(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 5 || size.second < 5) {
     return false;
   }
 
@@ -88,7 +95,8 @@ bool put_boat(Cells &cells, int y, int x) {
 }
 
 bool put_tub(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 5 || size.second < 5) {
     return false;
   }
 
@@ -101,7 +109,8 @@ bool put_tub(Cells &cells, int y, int x) {
 }
 
 bool put_blinker(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 5 || size.second < 5) {
     return false;
   }
 
@@ -113,7 +122,8 @@ bool put_blinker(Cells &cells, int y, int x) {
 }
 
 bool put_toad(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 6 || size.second < 6) {
     return false;
   }
 
@@ -128,7 +138,8 @@ bool put_toad(Cells &cells, int y, int x) {
 }
 
 bool put_beacon(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 6) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 6 || size.second < 6) {
     return false;
   }
 
@@ -145,7 +156,8 @@ bool put_beacon(Cells &cells, int y, int x) {
 }
 
 bool put_pulsar(Cells &cells, int y, int x) {
-  if (cells.size.first < 17 || cells.size.second < 17) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 17 || size.second < 17) {
     return false;
   }
 
@@ -211,7 +223,8 @@ bool put_pulsar(Cells &cells, int y, int x) {
 }
 
 bool put_pentadecathlon(Cells &cells, int y, int x) {
-  if (cells.size.first < 18 || cells.size.second < 11) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 18 || size.second < 11) {
     return false;
   }
 
@@ -232,7 +245,8 @@ bool put_pentadecathlon(Cells &cells, int y, int x) {
 }
 
 bool put_glider(Cells &cells, int y, int x) {
-  if (cells.size.first < 5 || cells.size.second < 5) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 5 || size.second < 5) {
     return false;
   }
 
@@ -244,8 +258,10 @@ bool put_glider(Cells &cells, int y, int x) {
 
   return true;
 }
+
 bool put_lwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 6 || cells.size.second < 7) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 6 || size.second < 7) {
     return false;
   }
 
@@ -263,7 +279,8 @@ bool put_lwss(Cells &cells, int y, int x) {
 }
 
 bool put_mwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 7 || cells.size.second < 8) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 7 || size.second < 8) {
     return false;
   }
 
@@ -283,7 +300,8 @@ bool put_mwss(Cells &cells, int y, int x) {
 }
 
 bool put_hwss(Cells &cells, int y, int x) {
-  if (cells.size.first < 7 || cells.size.second < 9) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 7 || size.second < 9) {
     return false;
   }
 
@@ -305,7 +323,8 @@ bool put_hwss(Cells &cells, int y, int x) {
 }
 
 bool put_glider_gun(Cells &cells, int y, int x) {
-  if (cells.size.first < 11 || cells.size.second < 38) {
+  pair<int, int> size = cells.get_size();
+  if (size.first < 11 || size.second < 38) {
     return false;
   }
 

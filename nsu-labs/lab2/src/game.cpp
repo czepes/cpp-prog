@@ -61,22 +61,22 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
-    sim = new Simulator;
+    sim = new Simulator(true);
   }
 
   if (output.is_open()) {
-    ren = new Renderer(sim->get_size(), output);
+    ren = new Renderer(sim->get_cells(), output);
   } else {
-    ren = new Renderer(sim->get_size());
+    ren = new Renderer(sim->get_cells());
   }
 
-  if (outfile.empty()) {
+  if (iterations == 0 && outfile.empty()) {
     sim->live(iterations);
     Controller ctr(*sim, *ren);
     ctr.start();
   } else {
     sim->live(iterations);
-    ren->render(sim->get_cells(), sim->get_name());
+    ren->render(sim->get_name());
   }
 
   if (input.is_open()) {

@@ -76,6 +76,9 @@ const ArgParser &ArgParser::parse() {
         } catch (out_of_range e) {
           throw out_of_range("Value " + value + " is too big");
         }
+        if (iterations < 0) {
+          throw out_of_range("Value " + value + " is negative");
+        }
       } else if (arg == "-i") {
         infile = value;
       } else if (arg == "-o") {

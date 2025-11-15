@@ -13,6 +13,12 @@ int norm(int v, int n) {
 }
 
 const pair<int, int> get_window_size() {
+#ifdef ONSOLE_SCREEN_BUFFER_INFO
+  ONSOLE_SCREEN_BUFFER_INFO csbi;
+  GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+  width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+  height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
   int height{0};
   int width{0};
   struct winsize window;
@@ -21,6 +27,7 @@ const pair<int, int> get_window_size() {
     height = window.ws_row;
     width = window.ws_col;
   }
+#endif
 
   if (height <= 0 || width <= 0) {
     const char *rows = getenv("LINES");
@@ -63,16 +70,35 @@ CellsRow Cells::operator[](int y) {
   return CellsRow(&matrix, norm(y, size.first));
 };
 
+const pair<int, int> Cells::get_size() const { return size; }
+
 // Simulator
 
-Simulator::Simulator() {
+Simulator::Simulator(bool fill) {
   generate_cells();
+
+  if (!fill) {
+    return;
+  }
+
+  // At least 11 height, 38 width
   if (put_glider_gun(cells, 0, 0)) {
     return;
-  } else {
-    put_lwss(cells, 0, 0);
-    put_mwss(cells, 0, 10);
-    put_hwss(cells, 0, 20);
+  }
+
+  // At least 7 height, 9 width
+  if (put_hwss(cells, 0, 0)) {
+    return;
+  }
+
+  // At least 5 height, 5 width
+  if (put_glider(cells, 0, 0)) {
+    return;
+  }
+
+  // At least 2 height, 2 width
+  if (put_block(cells, 0, 0)) {
+    return;
   }
 };
 
@@ -160,11 +186,6 @@ void Simulator::parse_lif(ifstream &input) {
   stringstream rules(buf.substr(3, buf.length() - 3), ios_base::in);
 
   while (getline(rules, buf, '\\')) {
-    if (buf.empty()) {
-      throw invalid_argument(error + "Line " + to_string(line) +
-                             ": Missing rule literals");
-    }
-
     char rule = buf[0];
     string values = buf.substr(1, buf.length() - 1);
 
@@ -244,10 +265,11 @@ void Simulator::live(int n) {
   }
 }
 void Simulator::live() {
-  Cells new_cells(cells.size);
+  pair<int, int> size = cells.get_size();
+  Cells new_cells(size);
 
-  for (int y = 0; y < cells.size.first; y++) {
-    for (int x = 0; x < cells.size.second; x++) {
+  for (int y = 0; y < size.first; y++) {
+    for (int x = 0; x < size.second; x++) {
       char neighbours = count_neighbours(y, x) + '0';
 
       if (cells[y][x]) {
@@ -263,14 +285,12 @@ void Simulator::live() {
   cells = new_cells;
 }
 
-const pair<int, int> Simulator::get_size() const { return cells.size; }
-
 string Simulator::get_name() const { return name; };
 string Simulator::get_birth_rule() const { return birth_rule; };
 string Simulator::get_survival_rule() const { return survival_rule; };
 Cells &Simulator::get_cells() { return cells; }
 
-void Simulator::set_name(string name) {}
+void Simulator::set_name(string name) { this->name = name; }
 
 void Simulator::set_birth_rule(string rule) {
   if (check_rule(rule)) {
