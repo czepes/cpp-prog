@@ -1,6 +1,6 @@
 #include "controller.h"
 #include "parser.h"
-#include "renderer.h"
+#include "render.h"
 #include "simulator.h"
 
 int main(int argc, char **argv) {
@@ -44,12 +44,12 @@ int main(int argc, char **argv) {
     }
   }
 
-  Simulator *sim;
-  Renderer *ren;
+  unique_ptr<Simulator> sim;
+  unique_ptr<Render> ren;
 
   if (input.is_open()) {
     try {
-      sim = new Simulator(input);
+      sim = make_unique<Simulator>(input);
     } catch (const exception &e) {
       cerr << e.what() << endl;
 
@@ -61,13 +61,13 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
-    sim = new Simulator(true);
+    sim = make_unique<Simulator>(true);
   }
 
   if (output.is_open()) {
-    ren = new Renderer(sim->get_cells(), output);
+    ren = make_unique<Render>(sim->get_cells(), output);
   } else {
-    ren = new Renderer(sim->get_cells());
+    ren = make_unique<Render>(sim->get_cells());
   }
 
   if (iterations == 0 && outfile.empty()) {
@@ -85,7 +85,5 @@ int main(int argc, char **argv) {
   if (output.is_open()) {
     output.close();
   }
-  delete sim;
-  delete ren;
   return 0;
 }

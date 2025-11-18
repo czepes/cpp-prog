@@ -17,19 +17,19 @@ include(GoogleTest)
 enable_testing()
 
 add_library(parser ./src/parser.cpp ./src/parser.h)
-add_library(renderer ./src/renderer.cpp ./src/renderer.h)
+add_library(render ./src/render.cpp ./src/render.h)
 add_library(controller ./src/controller.cpp ./src/controller.h)
 add_library(simulator ./src/simulator.cpp ./src/simulator.h)
 add_library(patterns ./src/patterns.cpp ./src/patterns.h)
 
-add_library(gsimulator ./src/simulator.cpp ./src/simulator.h)
-target_compile_options(gsimulator PRIVATE -g -O0 --coverage -fprofile-arcs -ftest-coverage)
+add_library(cov_simulator ../src/simulator.cpp ../src/simulator.h)
+target_compile_options(cov_simulator PRIVATE -g -O0 --coverage -fprofile-arcs -ftest-coverage)
 
 add_executable(game ./src/game.cpp)
-target_link_libraries(game parser renderer simulator patterns controller)
+target_link_libraries(game parser render simulator patterns controller)
 
 add_executable(gametest ./test/test.cpp)
-target_link_libraries(gametest GTest::gtest_main parser renderer gsimulator patterns controller gcov)
+target_link_libraries(gametest GTest::gtest_main parser render cov_simulator patterns controller gcov)
 target_link_options(gametest PRIVATE --coverage)
 
 add_custom_target(

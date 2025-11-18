@@ -1,6 +1,8 @@
 #include "controller.h"
 #include "simulator.h"
+#include <chrono>
 #include <stdexcept>
+#include <thread>
 
 void Controller::help() {
   cout << "Game of life interactive mode" << endl
@@ -8,10 +10,13 @@ void Controller::help() {
        << "  help            - show this mesaage" << endl
        << "  tick <n=1>      - live n iterations" << endl
        << "  dump <filename> - write current status to file" << endl
+       << "  load <filename> - load status from file" << endl
+       << "  clear           - clear cells" << endl
+       << "  anim            - toggle animations" << endl
        << "  quit            - finish the game" << endl;
 }
 
-Controller::Controller(Simulator &sim, Renderer &ren) : sim(sim), ren(ren) {};
+Controller::Controller(Simulator &sim, Render &ren) : sim(sim), ren(ren) {};
 
 bool Controller::handle_tick(string ticks) {
   int n{1};
@@ -37,7 +42,17 @@ bool Controller::handle_tick(string ticks) {
     return false;
   }
 
-  sim.live(n);
+  if (anim) {
+    for (int i = 0; i < n; i++) {
+      sim.live();
+      ren.clean();
+      ren.render(sim.get_name());
+      this_thread::sleep_for(chrono::milliseconds(300));
+    }
+  } else {
+    sim.live(n);
+  }
+
   statusline = "Lived for " + to_string(n) + " iteration(s)";
 
   return true;
@@ -56,10 +71,36 @@ bool Controller::handle_dump(string &file) {
     return false;
   }
 
-  ren.render(output, sim.get_name());
+  sim << output;
   statusline = "Dumped to " + file;
 
   output.close();
+  return true;
+}
+
+bool Controller::handle_load(string &file) {
+  if (file.empty()) {
+    statusline = "No file given";
+    return false;
+  }
+
+  ifstream input(file);
+
+  if (input.fail() || !input.is_open()) {
+    statusline = "Failed to open file " + file;
+    return false;
+  }
+
+  try {
+    sim >> input;
+  } catch (const exception &e) {
+    statusline = "Failed to load from " + file + ": " + e.what();
+    return false;
+  }
+
+  statusline = "Loaded from " + file;
+
+  input.close();
   return true;
 }
 
@@ -80,6 +121,14 @@ bool Controller::handle_input(string &input) {
     handle_tick(value);
   } else if (command == "dump") {
     handle_dump(value);
+  } else if (command == "load") {
+    handle_load(value);
+  } else if (command == "clear") {
+    sim.get_cells().clear();
+    statusline = "Cells field was cleared";
+  } else if (command == "anim") {
+    anim = !anim;
+    statusline = anim ? "Enabled animations" : "Disabled animations";
   } else if (command == "quit" || command == "exit") {
     return false;
   } else if (input.empty()) {

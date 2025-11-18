@@ -5,7 +5,8 @@
 
 class GameTest : public testing::Test {
 protected:
-  Simulator *cln;
+  Simulator *empty;
+  Simulator *fixed;
   Simulator *sim;
   Simulator *fsim;
   Simulator *fssim;
@@ -13,8 +14,9 @@ protected:
   pair<int, int> size;
 
   GameTest() {
-    cln = new Simulator(pair(20, 20));
-    sim = new Simulator();
+    empty = new Simulator();
+    sim = new Simulator(true);
+    fixed = new Simulator(pair(20, 20));
 
     ifstream in("../data/pulsar.lif");
     fsim = new Simulator(in);
@@ -27,7 +29,8 @@ protected:
   }
 
   ~GameTest() {
-    delete cln;
+    delete empty;
+    delete fixed;
     delete sim;
     delete fsim;
     delete fssim;
@@ -120,25 +123,33 @@ TEST_F(GameTest, Parsing) {
 }
 
 TEST_F(GameTest, Setters) {
-  cln->set_name("New Name");
-  cln->set_birth_rule("12345678");
-  cln->set_survival_rule("12345678");
+  fixed->set_name("New Name");
+  fixed->set_birth_rule("12345678");
+  fixed->set_survival_rule("12345678");
 
-  ASSERT_EQ(cln->get_name(), "New Name");
-  ASSERT_EQ(cln->get_birth_rule(), "12345678");
-  ASSERT_EQ(cln->get_survival_rule(), "12345678");
+  ASSERT_EQ(fixed->get_name(), "New Name");
+  ASSERT_EQ(fixed->get_birth_rule(), "12345678");
+  ASSERT_EQ(fixed->get_survival_rule(), "12345678");
 
-  cln->set_birth_rule("90");
-  cln->set_survival_rule("abc");
+  fixed->set_birth_rule("90");
+  fixed->set_survival_rule("abc");
 
-  ASSERT_NE(cln->get_birth_rule(), "90");
-  ASSERT_NE(cln->get_survival_rule(), "abc");
-  ASSERT_EQ(cln->get_birth_rule(), "12345678");
-  ASSERT_EQ(cln->get_survival_rule(), "12345678");
+  ASSERT_NE(fixed->get_birth_rule(), "90");
+  ASSERT_NE(fixed->get_survival_rule(), "abc");
+  ASSERT_EQ(fixed->get_birth_rule(), "12345678");
+  ASSERT_EQ(fixed->get_survival_rule(), "12345678");
+
+  Cells &cells = fixed->get_cells();
+  cells.clear();
+  for (const auto row : cells) {
+    for (const auto cell : row) {
+      ASSERT_FALSE(cell);
+    }
+  }
 }
 
 TEST_F(GameTest, Simulating) {
-  Cells &cells = cln->get_cells();
+  Cells &cells = fixed->get_cells();
 
   cells[0][0] = true;
 
@@ -155,7 +166,7 @@ TEST_F(GameTest, Simulating) {
   EXPECT_TRUE(cells[2][2] && cells[2][4] && cells[3][3] && cells[4][2] &&
               cells[4][4]);
 
-  cln->live(1);
+  fixed->live(1);
 
   EXPECT_FALSE(cells[0][0]);
   EXPECT_TRUE(find_block(cells, -3, -3));
@@ -163,16 +174,16 @@ TEST_F(GameTest, Simulating) {
                cells[4][4]);
   EXPECT_TRUE(cells[2][3] && cells[3][2] && cells[3][4] && cells[4][3]);
 
-  cln->live(10);
+  fixed->live(10);
 
   EXPECT_TRUE(find_block(cells, -3, -3));
   EXPECT_TRUE(cells[2][3] && cells[3][2] && cells[3][4] && cells[4][3]);
 }
 
 TEST_F(GameTest, NoSurvival) {
-  cln->set_survival_rule("");
-  cln->set_birth_rule("");
-  Cells &cells = cln->get_cells();
+  fixed->set_survival_rule("");
+  fixed->set_birth_rule("");
+  Cells &cells = fixed->get_cells();
 
   cells[0][0] = true;
 
@@ -189,7 +200,7 @@ TEST_F(GameTest, NoSurvival) {
   EXPECT_TRUE(cells[2][2] && cells[2][4] && cells[3][3] && cells[4][2] &&
               cells[4][4]);
 
-  cln->live(1);
+  fixed->live(1);
 
   for (const auto &row : cells) {
     for (const auto &cell : row) {
@@ -199,16 +210,16 @@ TEST_F(GameTest, NoSurvival) {
 }
 
 TEST_F(GameTest, NoDying) {
-  cln->set_survival_rule("12345678");
-  cln->set_birth_rule("12345678");
-  Cells &cells = cln->get_cells();
+  fixed->set_survival_rule("12345678");
+  fixed->set_birth_rule("12345678");
+  Cells &cells = fixed->get_cells();
   int height{cells.get_size().first};
   int width{cells.get_size().second};
 
   put_block(cells, 0, 0, height, width, false);
   EXPECT_TRUE(find_block(cells, 0, 0, height, width, false));
 
-  cln->live(height);
+  fixed->live(height);
 
   for (const auto row : cells) {
     for (const auto cell : row) {
@@ -218,20 +229,63 @@ TEST_F(GameTest, NoDying) {
 }
 
 TEST_F(GameTest, CustomRules) {
-  cln->set_survival_rule("8");
-  cln->set_birth_rule("");
-  Cells &cells = cln->get_cells();
+  fixed->set_survival_rule("8");
+  fixed->set_birth_rule("");
+  Cells &cells = fixed->get_cells();
 
   put_block(cells, 0, 0, 3, 3);
 
   EXPECT_TRUE(find_block(cells, 0, 0, 3, 3));
 
-  cln->live();
+  fixed->live();
 
   EXPECT_FALSE(find_block(cells, 0, 0, 3, 3));
   EXPECT_TRUE(cells[1][1]);
 
-  cln->live();
+  fixed->live();
 
   EXPECT_FALSE(cells[1][1]);
+}
+
+TEST_F(GameTest, DumpLoad) {
+  string new_name = "New Name";
+  string new_rule = "3";
+  Cells &cells = fssim->get_cells();
+
+  fssim->set_name(new_name);
+  fssim->set_survival_rule(new_rule);
+
+  fssim->live();
+
+  EXPECT_TRUE(cells[2][2]);
+  EXPECT_TRUE(cells[3][3]);
+
+  ofstream out;
+  out.open("temp");
+  (*fssim) << out;
+  out.close();
+
+  ifstream in;
+  in.open("../data/beacon.lif");
+  (*fssim) >> in;
+  in.close();
+
+  EXPECT_NE(fssim->get_name(), new_name);
+  EXPECT_NE(fssim->get_survival_rule(), new_rule);
+
+  EXPECT_FALSE(cells[2][2]);
+  EXPECT_FALSE(cells[3][3]);
+
+  in.open("temp");
+  (*fssim) >> in;
+  in.close();
+
+  EXPECT_EQ(fssim->get_name(), new_name);
+  EXPECT_EQ(fssim->get_survival_rule(), new_rule);
+
+  EXPECT_TRUE(cells[2][2]);
+  EXPECT_TRUE(cells[3][3]);
+
+  (*fssim) >> in;
+  (*fssim) << out;
 }

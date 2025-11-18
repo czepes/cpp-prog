@@ -57,20 +57,31 @@ Cell &Cell::operator=(bool alive) {
   (*ptr)[y][x] = alive;
   return *this;
 }
+ConstCell::operator bool() const { return (*ptr)[y][x]; };
 
 Cell CellsRow::operator[](int x) {
   return Cell(ptr, y, norm(x, (*ptr)[y].size()));
+};
+
+ConstCell ConstCellsRow::operator[](int x) const {
+  return ConstCell(ptr, y, norm(x, (*ptr)[y].size()));
 };
 
 Cells::Cells() : size(pair(0, 0)) {};
 Cells::Cells(const pair<int, int> size) : size(size) {
   matrix = vector(size.first, vector(size.second, false));
 }
+
 CellsRow Cells::operator[](int y) {
   return CellsRow(&matrix, norm(y, size.first));
 };
+ConstCellsRow Cells::operator[](int y) const {
+  return ConstCellsRow(&matrix, norm(y, size.first));
+};
 
 const pair<int, int> Cells::get_size() const { return size; }
+
+void Cells::clear() { matrix = vector(size.first, vector(size.second, false)); }
 
 // Simulator
 
@@ -125,7 +136,7 @@ void Simulator::generate_cells(const pair<int, int> size) {
   cells = Cells(size);
 }
 
-bool Simulator::check_rule(const string &values) {
+bool Simulator::check_rule(const string &values) const {
   const string allowed{"12345678"};
 
   for (const char num : values) {
@@ -141,7 +152,11 @@ bool Simulator::check_rule(const string &values) {
 void Simulator::parse_lif(ifstream &input) {
   const string error{"Simulator parsing error\n"};
   string buf;
-  int line = 0;
+  string name;
+  string birth_rule;
+  string survival_rule;
+  Cells cells(this->cells.get_size());
+  int line{0};
 
   // #Life 1.06
   getline(input, buf);
@@ -239,9 +254,14 @@ void Simulator::parse_lif(ifstream &input) {
   if (empty) {
     throw invalid_argument(error + "EOF: Missing coordinates");
   }
+
+  this->name = name;
+  this->birth_rule = birth_rule;
+  this->survival_rule = survival_rule;
+  this->cells = cells;
 }
 
-int Simulator::count_neighbours(int y, int x) {
+int Simulator::count_neighbours(int y, int x) const {
   int count = 0;
 
   for (int sy = -1; sy <= 1; sy++) {
@@ -302,4 +322,35 @@ void Simulator::set_survival_rule(string rule) {
   if (check_rule(rule)) {
     survival_rule = rule;
   }
+}
+
+Simulator &Simulator::operator<<(ofstream &output) {
+  if (!output.is_open()) {
+    return *this;
+  }
+
+  pair<int, int> size = cells.get_size();
+  output << "#Life 1.06" << endl
+         << "#N " << name << endl
+         << "#R B" << birth_rule << "\\S" << survival_rule << endl;
+
+  for (int y = 0; y < size.first; y++) {
+    for (int x = 0; x < size.second; x++) {
+      if (cells[y][x]) {
+        output << x << " " << y << endl;
+      }
+    }
+  }
+
+  return *this;
+}
+
+Simulator &Simulator::operator>>(ifstream &input) {
+  if (!input.is_open()) {
+    return *this;
+  }
+
+  parse_lif(input);
+
+  return *this;
 }

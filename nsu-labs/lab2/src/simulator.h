@@ -61,7 +61,6 @@ private:
 public:
   ConstCell(const celmat *ptr, int y, int x) : ptr(ptr), y(y), x(x) {};
   operator bool() const;
-  ConstCell &operator=(bool alive);
 };
 
 class ConstCellsRow {
@@ -71,7 +70,7 @@ private:
 
 public:
   ConstCellsRow(const celmat *ptr, int y) : ptr(ptr), y(y) {};
-  ConstCell operator[](int x);
+  ConstCell operator[](int x) const;
 };
 
 class Cells {
@@ -86,6 +85,8 @@ public:
   ConstCellsRow operator[](int y) const;
 
   const pair<int, int> get_size() const;
+
+  void clear();
 
   using iterator = celmat::iterator;
   using const_iterator = celmat::const_iterator;
@@ -109,8 +110,8 @@ private:
   void generate_cells();
   void generate_cells(const pair<int, int> size);
 
-  int count_neighbours(int y, int x);
-  bool check_rule(const string &values);
+  int count_neighbours(int y, int x) const;
+  bool check_rule(const string &values) const;
 
 public:
   Simulator(bool fill = false);
@@ -129,6 +130,9 @@ public:
   void set_name(string name);
   void set_survival_rule(string rule);
   void set_birth_rule(string rule);
+
+  Simulator &operator>>(ifstream &input);
+  Simulator &operator<<(ofstream &output);
 };
 
 #endif
