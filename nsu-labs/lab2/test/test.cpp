@@ -288,4 +288,6 @@ TEST_F(GameTest, DumpLoad) {
 
   (*fssim) >> in;
   (*fssim) << out;
+
+  system("rm temp");
 }
