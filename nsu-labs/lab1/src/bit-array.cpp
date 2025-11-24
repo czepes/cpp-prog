@@ -96,6 +96,20 @@ BitArray &BitArray::set(int n, bool val) {
   return *this;
 }
 
+bool BitArray::get(int i) const {
+  if (i < 0) {
+    throw std::invalid_argument("Unable to get: n is negative");
+  }
+
+  if ((unsigned int)i >= bits) {
+    throw std::out_of_range("Unable to set: n is out of range");
+  }
+
+  const int byte_pos = i / byte_bits;
+  const int bit_pos = i % byte_bits;
+  return (bytes.at(byte_pos) >> bit_pos) & 1UL;
+}
+
 BitArray &BitArray::set() {
   const int size = bytes.size();
   const int trail = bits % byte_bits;
@@ -173,10 +187,7 @@ bool BitArray::operator[](int i) const {
     throw std::out_of_range("Out of range trying to access [i]th bit");
   }
 
-  const int byte_pos = i / byte_bits;
-  const int bit_pos = i % byte_bits;
-
-  return (bytes.at(byte_pos) >> bit_pos) & 1UL;
+  return get(i);
 }
 
 BitArray::BitProxy BitArray::operator[](int i) {
@@ -380,17 +391,14 @@ BitArray::BitProxy &BitArray::BitProxy::operator=(bool bit) {
   return *this;
 }
 
-BitArray::BitProxy::operator bool() const {
-  const int byte_pos = idx / byte_bits;
-  const int bit_pos = idx % byte_bits;
-  return (ba.bytes.at(byte_pos) >> bit_pos) & 1UL;
-};
+BitArray::BitProxy::operator bool() const { return ba.get(idx); };
 
 // Iterators
 
 BitArray::ConstIterator::ConstIterator(const BitArray &ba, int idx)
     : ba(ba), idx(idx) {
   byte = idx >= ba.bits ? 0 : ba.bytes[idx / byte_bits];
+  byte >>= idx % byte_bits;
 }
 
 bool BitArray::ConstIterator::operator*() { return byte & 1UL; }

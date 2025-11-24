@@ -6,22 +6,18 @@
 #include <string>
 #include <vector>
 
-#define BYTE_SIZE 8
-#define BIT_ARRAY_DEFAULT_SIZE 1
-
-using byte_type = unsigned long;
+using byte_type = ulong;
+const int byte_size = sizeof(byte_type);
 
 class BitArray {
 private:
-  static constexpr int default_size = BIT_ARRAY_DEFAULT_SIZE;
-
   std::vector<byte_type> bytes;
   unsigned int bits;
 
   static int to_bytes(int bits);
 
 public:
-  static constexpr int byte_bits = sizeof(byte_type) * BYTE_SIZE;
+  static const int byte_bits = sizeof(byte_type) * byte_size;
 
   // Proxy
 
@@ -134,6 +130,7 @@ public:
   int count() const;
 
   // Return i'th bit value
+  bool get(int i) const;
   bool operator[](int i) const;
   BitProxy operator[](int i);
 
