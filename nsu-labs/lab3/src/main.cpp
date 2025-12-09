@@ -1,36 +1,33 @@
+#include "converter.h"
 #include "parser.h"
 #include "soundp.h"
 #include <iostream>
+#include <memory>
 
 int main(int argc, const char **argv) {
-  vector<string> wav_files;
+  ConverterFactory::init();
+
+  vector<string> files;
   string config_file;
   unique_ptr<SoundProcessor> soundp;
 
   ArgParser parser(argc, argv);
   try {
-    parser.parse();
+    parser.parse().get(config_file, files);
   } catch (const exception &e) {
     cerr << e.what();
     return 1;
   }
-  parser.get(config_file, wav_files);
 
-  if (config_file.empty() || wav_files.size() == 0) {
+  if (config_file.empty() || files.size() == 0) {
     return 0;
   }
 
   try {
-    soundp = make_unique<SoundProcessor>(config_file, wav_files);
-  } catch (const exception &e) {
-    cerr << "Failed to create SoundProcessor:\n" << e.what();
-    return 1;
-  }
-
-  try {
+    soundp = make_unique<SoundProcessor>(config_file, files);
     soundp->process();
   } catch (const exception &e) {
-    cerr << "Failed to process audio files:\n" << e.what();
+    cerr << e.what();
     return 1;
   }
 

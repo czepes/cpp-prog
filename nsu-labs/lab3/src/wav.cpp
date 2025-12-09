@@ -1,6 +1,7 @@
 #include "wav.h"
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 bool WavFile::validate_header(WavHeader &header) {
   WavHeader valid;
@@ -20,19 +21,18 @@ WavReader::WavReader(const string &path) {
     throw invalid_argument("Failed to open file: " + path);
   }
 
-  data_start = sizeof(WavHeader) - 8;
+  size_t data_start = sizeof(WavHeader) - 8;
   stream.read(reinterpret_cast<char *>(&header), data_start);
 
   if (!validate_header(header)) {
     throw runtime_error("Unsupproted WAV format for file: " + path);
   }
 
-  char chunk_id[4];
-
   while (true) {
+    char chunk_id[4];
     streampos current = stream.tellg();
 
-    stream.read(chunk_id, 4);
+    stream.read(chunk_id, sizeof(chunk_id));
     if (!stream) {
       cerr << "Failed to read chunk_id" << endl;
       break;
@@ -50,85 +50,150 @@ WavReader::WavReader(const string &path) {
     stream.seekg(chunk_size, ios::cur);
   }
 
-  stream.seekg(data_start + 8);
+  current_pos = 0;
+  data_start += 8;
+  stream.seekg(data_start);
 }
 
 WavReader::~WavReader() { close(); }
 
-size_t WavReader::read(audio_t &samples) {
+size_t WavReader::read(audio_buffer_t &samples, size_t num_samples) {
   if (!stream.is_open()) {
-    throw runtime_error("Tried to read from WavReader, but stream is closed");
+    throw runtime_error("Tried to read from " + path +
+                        " , but stream is closed");
   }
 
   if (stream.eof()) {
     return 0;
   }
 
-  stream.read(reinterpret_cast<char *>(samples.data()), sizeof(audio_t));
+  // TODO: count n = eof_pos - cur_pos?
+  size_t to_read = min(get_remaining_samples(), num_samples);
 
-  size_t bytes_read = stream.gcount();
-  size_t samples_read = bytes_read / sizeof(sample_t);
-
-  if (samples_read < RATE) {
-    for (size_t i = samples_read; i < RATE; i++) {
-      samples[i] = 0;
-    }
+  if (to_read == 0) {
+    samples.clear();
+    return 0;
   }
+
+  samples.resize(to_read);
+
+  stream.read(reinterpret_cast<char *>(samples.data()),
+              to_read * sizeof(sample_t));
+
+  if (stream.fail() && !stream.eof()) {
+    throw runtime_error("Failed to read from " + path);
+  }
+
+  size_t samples_read = stream.gcount() / sizeof(sample_t);
+  samples.resize(samples_read);
+  current_pos += samples_read;
 
   return samples_read;
 }
 
-WavReader &WavReader::operator>>(sample_t &sample) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to read from WavReader, but stream is closed");
-  }
-
-  if (stream.eof()) {
-    return *this;
-  }
-
-  stream.read(reinterpret_cast<char *>(&sample), sizeof(sample_t));
-  return *this;
+size_t WavReader::read(audio_buffer_t &samples) {
+  return read(samples, get_remaining_samples());
 }
 
-WavReader &WavReader::operator>>(audio_t &samples) {
-  read(samples);
-  return *this;
+size_t WavReader::read(audio_buffer_t &samples, double start, double end) {
+  size_t start_sample = seconds_to_sample(start);
+  size_t end_sample = seconds_to_sample(end);
+
+  if (start_sample >= get_total_samples()) {
+    samples.clear();
+    return 0;
+  }
+
+  if (end_sample <= start_sample || end_sample > get_total_samples()) {
+    end_sample = get_total_samples();
+  }
+
+  skip_to(start_sample);
+  size_t samples_read = read(samples, end_sample - start_sample);
+
+  return samples_read;
 }
 
-WavReader &WavReader::operator>>(WavWriter &writer) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to read from WavReader to WavWriter, but "
-                        "WavReader stream is closed");
+void WavReader::skip(size_t num_samples) {
+  size_t to_skip = min(get_remaining_samples(), num_samples);
+  stream.seekg(to_skip, ios::cur);
+  current_pos += to_skip;
+}
+
+void WavReader::skip_to(size_t sample_pos) {
+  if (sample_pos == current_pos) {
+    return;
   }
+  size_t to_skip = min(get_total_samples(), sample_pos);
+  stream.seekg(data_start + to_skip * sizeof(sample_t));
+  current_pos = sample_pos;
+}
 
-  if (!writer.is_open()) {
-    throw runtime_error("Tried to read from WavReader to WavWriter, but "
-                        "WavWriter stream is closed");
-  }
-
-  if (stream.eof() || writer.eof()) {
-    return *this;
-  }
-
-  sample_t sample;
-  stream.read(reinterpret_cast<char *>(&sample), sizeof(sample_t));
-  writer << sample;
-
-  return *this;
+void WavReader::reset() {
+  stream.seekg(data_start, ios::beg);
+  current_pos = 0;
 }
 
 WavWriter::WavWriter(const string &path) {
   this->path = path;
-  stream.open(path, ios::binary | ios::out);
+  stream.open(path, ios::binary | ios::out | ios::trunc);
 
   if (!stream) {
     throw invalid_argument("Failed to open file: " + path);
   }
 
-  header = WavHeader();
-  data_start = sizeof(WavHeader);
   stream.write(reinterpret_cast<char *>(&header), sizeof(WavHeader));
+  data_start = sizeof(WavHeader);
+  current_pos = 0;
+}
+
+WavWriter::~WavWriter() { close(); }
+
+void WavWriter::write(sample_t sample) {
+  if (!stream.is_open()) {
+    throw runtime_error("Tried to write to WavWriter, but stream is closed");
+  }
+
+  stream.write(reinterpret_cast<char *>(&sample), sizeof(sample_t));
+
+  if (stream.fail()) {
+    throw runtime_error("Failed to write to " + path);
+  }
+
+  current_pos++;
+}
+
+void WavWriter::write(const audio_buffer_t &samples) {
+  if (!stream.is_open()) {
+    throw runtime_error("Tried to write to WavWriter, but stream is closed");
+  }
+
+  if (samples.empty()) {
+    return;
+  }
+
+  size_t num_samples = samples.size();
+  stream.write(reinterpret_cast<const char *>(samples.data()),
+               num_samples * sizeof(sample_t));
+
+  if (stream.fail()) {
+    throw runtime_error("Failed to write to " + path);
+  }
+
+  current_pos += num_samples;
+}
+
+void WavWriter::write_silence(size_t num_samples) {
+  if (!stream.is_open()) {
+    throw runtime_error("Tried to write to WavWriter, but stream is closed");
+  }
+
+  if (num_samples == 0) {
+    return;
+  }
+
+  audio_buffer_t silence(num_samples, 0);
+  write(silence);
 }
 
 void WavWriter::close() {
@@ -141,64 +206,11 @@ void WavWriter::update_header() {
     return;
   }
 
-  streampos current = stream.tellp();
+  header.data_size = current_pos * sizeof(sample_t);
   header.file_size = sizeof(WavHeader) - 8 + header.data_size;
 
+  streampos current = stream.tellp();
   stream.seekp(0);
   stream.write(reinterpret_cast<char *>(&header), sizeof(WavHeader));
   stream.seekp(current);
-}
-
-WavWriter::~WavWriter() { close(); }
-
-void WavWriter::write(const audio_t &samples) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write to WavWriter, but stream is closed");
-  }
-
-  stream.write(reinterpret_cast<const char *>(samples.data()), sizeof(audio_t));
-  header.data_size += sizeof(audio_t);
-  header.file_size += sizeof(audio_t);
-}
-
-WavWriter &WavWriter::operator<<(const sample_t sample) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write to WavWriter, but stream is closed");
-  }
-
-  stream.write(reinterpret_cast<const char *>(&sample), sizeof(sample));
-  header.data_size += sizeof(sample_t);
-  header.file_size += sizeof(sample_t);
-
-  return *this;
-}
-
-WavWriter &WavWriter::operator<<(const audio_t &samples) {
-  write(samples);
-  return *this;
-}
-
-WavWriter &WavWriter::operator<<(WavReader &reader) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write from WavReader to WavWriter, but "
-                        "WavWriter stream is closed");
-  }
-
-  if (!reader.is_open()) {
-    throw runtime_error("Tried to write from WavReader to WavWriter, but "
-                        "WavReader stream is closed");
-  }
-
-  if (reader.eof()) {
-    throw runtime_error("Tried to write from WavReader to WavWriter, but "
-                        "WavReader stream is eof");
-  }
-
-  sample_t sample;
-  reader >> sample;
-  stream.write(reinterpret_cast<const char *>(&sample), sizeof(sample));
-  header.data_size += sizeof(sample_t);
-  header.file_size += sizeof(sample_t);
-
-  return *this;
 }

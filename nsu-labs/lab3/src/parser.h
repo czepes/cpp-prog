@@ -11,15 +11,14 @@ private:
   const int argc;
   const char **argv;
   string config;
-  string input;
   vector<string> files;
 
   static string help();
 
 public:
   ArgParser(int argc, const char **argv) : argc(argc), argv(argv) {};
-  void parse();
-  void get(string &config, vector<string> &files) const;
+  ArgParser &parse();
+  ArgParser &get(string &config_file, vector<string> &files);
 };
 
 #endif

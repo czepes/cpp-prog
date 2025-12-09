@@ -14,10 +14,17 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(parser ./src/parser.cpp ./src/parser.h)
-add_library(wav ./src/wav.cpp ./src/wav.h)
-add_library(processor ./src/soundp.cpp ./src/soundp.h)
-target_link_libraries(processor wav)
+add_library(processor
+  ./src/wav.cpp ./src/wav.h
+  ./src/parser.cpp ./src/parser.h
+  ./src/config-parser.cpp ./src/config-parser.h
+  ./src/converter.cpp ./src/converter.h
+  ./src/converters/muter.cpp ./src/converters/muter.h
+  ./src/converters/mixer.cpp ./src/converters/mixer.h
+  ./src/converters/cropper.cpp ./src/converters/cropper.h
+  ./src/converters/gainer.cpp ./src/converters/gainer.h
+  ./src/soundp.cpp ./src/soundp.h
+)
 
 add_executable(soundp ./src/main.cpp)
-target_link_libraries(soundp parser wav processor)
+target_link_libraries(soundp processor)

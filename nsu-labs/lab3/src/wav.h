@@ -4,17 +4,17 @@
 // TODO: remove
 #include <iostream>
 
-#include <array>
 #include <cstdint>
 #include <fstream>
+#include <vector>
 
-#define RATE 44100
+#define SAMPLE_RATE 44100
 
 using namespace std;
 
 using sample_t = int16_t;
-const size_t audio_size = RATE;              // 1 second of samples
-using audio_t = array<sample_t, audio_size>; // samples for 1 second
+const size_t audio_size = SAMPLE_RATE;
+using audio_buffer_t = vector<sample_t>;
 
 #pragma pack(push, 1)
 struct WavHeader {
@@ -28,8 +28,8 @@ struct WavHeader {
   uint32_t fmt_size = 16;
   uint16_t audio_format = 1;
   uint16_t num_channels = 1;
-  uint32_t sample_rate = RATE;
-  uint32_t byte_rate = RATE * 8;
+  uint32_t sample_rate = SAMPLE_RATE;
+  uint32_t byte_rate = SAMPLE_RATE * 8;
   uint16_t block_align = 1 * 2;
   uint16_t bits_per_sample = 16;
 
@@ -42,9 +42,10 @@ struct WavHeader {
 class WavFile {
 protected:
   WavHeader header;
-  size_t data_start;
   string path;
   fstream stream;
+  size_t data_start;
+  size_t current_pos = 0;
 
 public:
   static bool validate_header(WavHeader &header);
@@ -52,11 +53,16 @@ public:
   const WavHeader &get_header() const { return header; }
   const string &get_path() const { return path; }
 
-  size_t get_sample_amount() const {
+  size_t get_total_samples() const {
     return header.data_size / sizeof(sample_t);
   }
+  size_t get_current_pos() const { return current_pos; }
+  size_t get_remaining_samples() const {
+    return get_total_samples() - current_pos;
+  }
+
   double get_duration() const {
-    return static_cast<double>(get_sample_amount()) / header.sample_rate;
+    return static_cast<double>(get_total_samples()) / header.sample_rate;
   }
 
   size_t seconds_to_sample(double seconds) const {
@@ -67,7 +73,7 @@ public:
   }
 
   bool is_open() const { return stream.is_open(); }
-  bool eof() const { return stream.eof(); }
+  bool eof() const { return stream.eof() || get_remaining_samples() == 0; }
 
   void close() {
     if (stream.is_open()) {
@@ -90,6 +96,8 @@ public:
         << header.data << endl
         << header.data_size << endl;
   }
+
+  virtual ~WavFile() = default;
 };
 
 class WavReader;
@@ -100,12 +108,15 @@ public:
   explicit WavReader(const string &path);
   ~WavReader();
 
-  size_t read(audio_t &samples, size_t num);
-  size_t read(audio_t &samples);
+  size_t read(audio_buffer_t &samples, size_t num_samples);
+  size_t read(audio_buffer_t &samples);
+  size_t read(audio_buffer_t &samples, double start, double end);
 
-  WavReader &operator>>(sample_t &sample);
-  WavReader &operator>>(audio_t &samples);
-  WavReader &operator>>(WavWriter &writer);
+  void skip(size_t num_samples);
+  void skip_to(size_t sample_pos);
+  void reset();
+
+  size_t get_current_pos() const { return current_pos; }
 };
 
 class WavWriter : public WavFile {
@@ -113,13 +124,14 @@ public:
   explicit WavWriter(const string &path);
   ~WavWriter();
 
+  void write(sample_t sample);
+  void write(const audio_buffer_t &samples);
+  void write_silence(size_t num_samples);
+
+  size_t get_current_pos() const { return current_pos; }
+
   void update_header();
   void close();
-  void write(const audio_t &samples);
-
-  WavWriter &operator<<(const sample_t sample);
-  WavWriter &operator<<(const audio_t &samples);
-  WavWriter &operator<<(WavReader &reader);
 };
 
 #endif
