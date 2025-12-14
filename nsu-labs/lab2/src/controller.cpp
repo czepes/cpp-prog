@@ -71,7 +71,7 @@ bool Controller::handle_dump(string &file) {
     return false;
   }
 
-  sim << output;
+  sim >> output;
   statusline = "Dumped to " + file;
 
   output.close();
@@ -92,7 +92,7 @@ bool Controller::handle_load(string &file) {
   }
 
   try {
-    sim >> input;
+    sim << input;
   } catch (const exception &e) {
     statusline = "Failed to load from " + file + ": " + e.what();
     return false;

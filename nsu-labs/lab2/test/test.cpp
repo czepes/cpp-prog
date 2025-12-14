@@ -262,12 +262,12 @@ TEST_F(GameTest, DumpLoad) {
 
   ofstream out;
   out.open("temp");
-  (*fssim) << out;
+  (*fssim) >> out;
   out.close();
 
   ifstream in;
   in.open("../data/beacon.lif");
-  (*fssim) >> in;
+  (*fssim) << in;
   in.close();
 
   EXPECT_NE(fssim->get_name(), new_name);
@@ -277,7 +277,7 @@ TEST_F(GameTest, DumpLoad) {
   EXPECT_FALSE(cells[3][3]);
 
   in.open("temp");
-  (*fssim) >> in;
+  (*fssim) << in;
   in.close();
 
   EXPECT_EQ(fssim->get_name(), new_name);
@@ -286,8 +286,8 @@ TEST_F(GameTest, DumpLoad) {
   EXPECT_TRUE(cells[2][2]);
   EXPECT_TRUE(cells[3][3]);
 
-  (*fssim) >> in;
-  (*fssim) << out;
+  (*fssim) << in;
+  (*fssim) >> out;
 
   system("rm temp");
 }

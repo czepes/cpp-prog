@@ -131,8 +131,8 @@ public:
   void set_survival_rule(string rule);
   void set_birth_rule(string rule);
 
-  Simulator &operator>>(ifstream &input);
-  Simulator &operator<<(ofstream &output);
+  Simulator &operator<<(ifstream &input);
+  Simulator &operator>>(ofstream &output);
 };
 
 #endif

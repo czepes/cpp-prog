@@ -324,7 +324,7 @@ void Simulator::set_survival_rule(string rule) {
   }
 }
 
-Simulator &Simulator::operator<<(ofstream &output) {
+Simulator &Simulator::operator>>(ofstream &output) {
   if (!output.is_open()) {
     return *this;
   }
@@ -345,7 +345,7 @@ Simulator &Simulator::operator<<(ofstream &output) {
   return *this;
 }
 
-Simulator &Simulator::operator>>(ifstream &input) {
+Simulator &Simulator::operator<<(ifstream &input) {
   if (!input.is_open()) {
     return *this;
   }
