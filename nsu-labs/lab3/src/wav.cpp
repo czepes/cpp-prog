@@ -1,6 +1,7 @@
 #include "wav.h"
-#include <cstdint>
+#include "errors.h"
 #include <cstring>
+#include <iostream>
 #include <string>
 
 bool WavFile::validate_header(WavHeader &header) {
@@ -13,23 +14,80 @@ bool WavFile::validate_header(WavHeader &header) {
          header.bits_per_sample == valid.bits_per_sample;
 }
 
-WavReader::WavReader(const string &path) {
-  this->path = path;
-  stream.open(path, ios::binary | ios::in);
+size_t WavFile::get_total_samples() const {
+  return header.data_size / sizeof(sample_t);
+}
 
-  if (!stream) {
-    throw invalid_argument("Failed to open file: " + path);
+size_t WavFile::get_remaining_samples() const {
+  return get_total_samples() - current_pos;
+}
+
+double WavFile::get_duration() const {
+  return static_cast<double>(get_total_samples()) / header.sample_rate;
+}
+
+size_t WavFile::seconds_to_sample(double seconds) const {
+  return static_cast<size_t>(seconds * header.sample_rate);
+}
+
+double WavFile::sample_to_seconds(size_t sample_index) const {
+  return static_cast<double>(sample_index) / header.sample_rate;
+}
+
+void WavFile::open(const string &path, ios::openmode mode) {
+  close();
+  this->path = path;
+
+  stream.open(path, ios::binary | mode);
+
+  if (!stream || !stream.is_open()) {
+    throw WavError("Failed to open file " + path);
   }
 
-  size_t data_start = sizeof(WavHeader) - 8;
-  stream.read(reinterpret_cast<char *>(&header), data_start);
+  data_start = sizeof(WavHeader);
+  current_pos = 0;
+}
+void WavFile::close() {
+  if (stream.is_open()) {
+    stream.close();
+  }
+}
+void WavFile::print_header(ostream &out) {
+  out << header.riff << endl
+      << header.file_size << endl
+      << header.wave << endl
+      << header.fmt << endl
+      << header.fmt_size << endl
+      << header.audio_format << endl
+      << header.num_channels << endl
+      << header.sample_rate << endl
+      << header.byte_rate << endl
+      << header.block_align << endl
+      << header.bits_per_sample << endl
+      << header.data << endl
+      << header.data_size << endl;
+}
+
+WavReader::WavReader(const string &path) { open(path); }
+WavReader::~WavReader() { close(); }
+
+void WavReader::open(const string &path) {
+  if (this->path == path) {
+    return;
+  }
+
+  this->path = path;
+  WavFile::open(path, ios::in);
+
+  size_t shift = sizeof(header.data) + sizeof(header.data_size);
+  stream.read(reinterpret_cast<char *>(&header), sizeof(header) - shift);
 
   if (!validate_header(header)) {
-    throw runtime_error("Unsupproted WAV format for file: " + path);
+    throw WavError("Unsupproted WAV format for file: " + path);
   }
 
   while (true) {
-    char chunk_id[4];
+    char chunk_id[chunk_id_size];
     streampos current = stream.tellg();
 
     stream.read(chunk_id, sizeof(chunk_id));
@@ -38,36 +96,32 @@ WavReader::WavReader(const string &path) {
       break;
     }
 
-    if (memcmp(chunk_id, "data", 4) == 0) {
+    if (memcmp(chunk_id, "data", chunk_id_size) == 0) {
       data_start = current;
       stream.read(reinterpret_cast<char *>(&header.data_size),
-                  sizeof(uint32_t));
+                  sizeof(header.data_size));
       break;
     }
 
-    uint32_t chunk_size;
-    stream.read(reinterpret_cast<char *>(&chunk_size), sizeof(uint32_t));
+    chunk_size_t chunk_size;
+    stream.read(reinterpret_cast<char *>(&chunk_size), sizeof(chunk_size));
     stream.seekg(chunk_size, ios::cur);
   }
 
   current_pos = 0;
-  data_start += 8;
+  data_start = sizeof(header);
   stream.seekg(data_start);
 }
 
-WavReader::~WavReader() { close(); }
-
 size_t WavReader::read(audio_buffer_t &samples, size_t num_samples) {
   if (!stream.is_open()) {
-    throw runtime_error("Tried to read from " + path +
-                        " , but stream is closed");
+    throw WavError("Tried to read from " + path + " , but stream is closed");
   }
 
   if (stream.eof()) {
     return 0;
   }
 
-  // TODO: count n = eof_pos - cur_pos?
   size_t to_read = min(get_remaining_samples(), num_samples);
 
   if (to_read == 0) {
@@ -81,7 +135,7 @@ size_t WavReader::read(audio_buffer_t &samples, size_t num_samples) {
               to_read * sizeof(sample_t));
 
   if (stream.fail() && !stream.eof()) {
-    throw runtime_error("Failed to read from " + path);
+    throw WavError("Failed to read from " + path);
   }
 
   size_t samples_read = stream.gcount() / sizeof(sample_t);
@@ -104,7 +158,11 @@ size_t WavReader::read(audio_buffer_t &samples, double start, double end) {
     return 0;
   }
 
-  if (end_sample <= start_sample || end_sample > get_total_samples()) {
+  if (end_sample <= start_sample) {
+    return 0;
+  }
+
+  if (end_sample > get_total_samples()) {
     end_sample = get_total_samples();
   }
 
@@ -116,7 +174,7 @@ size_t WavReader::read(audio_buffer_t &samples, double start, double end) {
 
 void WavReader::skip(size_t num_samples) {
   size_t to_skip = min(get_remaining_samples(), num_samples);
-  stream.seekg(to_skip, ios::cur);
+  stream.seekg(to_skip * sizeof(sample_t), ios::cur);
   current_pos += to_skip;
 }
 
@@ -134,66 +192,15 @@ void WavReader::reset() {
   current_pos = 0;
 }
 
-WavWriter::WavWriter(const string &path) {
-  this->path = path;
-  stream.open(path, ios::binary | ios::out | ios::trunc);
-
-  if (!stream) {
-    throw invalid_argument("Failed to open file: " + path);
-  }
-
-  stream.write(reinterpret_cast<char *>(&header), sizeof(WavHeader));
-  data_start = sizeof(WavHeader);
-  current_pos = 0;
-}
-
+WavWriter::WavWriter(const string &path) { open(path); }
 WavWriter::~WavWriter() { close(); }
 
-void WavWriter::write(sample_t sample) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write to WavWriter, but stream is closed");
-  }
-
-  stream.write(reinterpret_cast<char *>(&sample), sizeof(sample_t));
-
-  if (stream.fail()) {
-    throw runtime_error("Failed to write to " + path);
-  }
-
-  current_pos++;
-}
-
-void WavWriter::write(const audio_buffer_t &samples) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write to WavWriter, but stream is closed");
-  }
-
-  if (samples.empty()) {
+void WavWriter::open(const string &path) {
+  if (this->path == path) {
     return;
   }
-
-  size_t num_samples = samples.size();
-  stream.write(reinterpret_cast<const char *>(samples.data()),
-               num_samples * sizeof(sample_t));
-
-  if (stream.fail()) {
-    throw runtime_error("Failed to write to " + path);
-  }
-
-  current_pos += num_samples;
-}
-
-void WavWriter::write_silence(size_t num_samples) {
-  if (!stream.is_open()) {
-    throw runtime_error("Tried to write to WavWriter, but stream is closed");
-  }
-
-  if (num_samples == 0) {
-    return;
-  }
-
-  audio_buffer_t silence(num_samples, 0);
-  write(silence);
+  WavFile::open(path, ios::out | ios::trunc);
+  stream.write(reinterpret_cast<char *>(&header), sizeof(WavHeader));
 }
 
 void WavWriter::close() {
@@ -213,4 +220,51 @@ void WavWriter::update_header() {
   stream.seekp(0);
   stream.write(reinterpret_cast<char *>(&header), sizeof(WavHeader));
   stream.seekp(current);
+}
+
+void WavWriter::write(sample_t sample) {
+  if (!stream.is_open()) {
+    throw WavError("Tried to write to WavWriter, but stream is closed");
+  }
+
+  stream.write(reinterpret_cast<char *>(&sample), sizeof(sample_t));
+
+  if (stream.fail()) {
+    throw WavError("Failed to write to " + path);
+  }
+
+  current_pos++;
+}
+
+void WavWriter::write(const audio_buffer_t &samples) {
+  if (!stream.is_open()) {
+    throw WavError("Tried to write to WavWriter, but stream is closed");
+  }
+
+  if (samples.empty()) {
+    return;
+  }
+
+  size_t num_samples = samples.size();
+  stream.write(reinterpret_cast<const char *>(samples.data()),
+               num_samples * sizeof(sample_t));
+
+  if (stream.fail()) {
+    throw WavError("Failed to write to " + path);
+  }
+
+  current_pos += num_samples;
+}
+
+void WavWriter::write_silence(size_t num_samples) {
+  if (!stream.is_open()) {
+    throw WavError("Tried to write to WavWriter, but stream is closed");
+  }
+
+  if (num_samples == 0) {
+    return;
+  }
+
+  audio_buffer_t silence(num_samples, 0);
+  write(silence);
 }

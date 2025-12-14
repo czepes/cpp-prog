@@ -1,7 +1,7 @@
 #include "config-parser.h"
+#include "errors.h"
 #include <exception>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 
 ConfigParser::ConfigParser(const string &config_file,
@@ -9,7 +9,7 @@ ConfigParser::ConfigParser(const string &config_file,
     : files(files), line_num(0) {
   stream.open(config_file);
   if (!stream.is_open()) {
-    throw runtime_error("Failed to open config file " + config_file);
+    throw ConfigParserError("Failed to open config file " + config_file);
   }
 }
 
@@ -82,8 +82,8 @@ bool ConfigParser::read_next_command(ParsedCommand &parsed_command) {
 
 string ConfigParser::parse_file_ref(const string &param, int line_num) {
   if (param.empty() || param[0] != '$') {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Expected file reference to start with '$'");
+    throw ConfigParserError(line_num,
+                            "Expected file reference to start with '$'");
   }
 
   int index;
@@ -92,15 +92,15 @@ string ConfigParser::parse_file_ref(const string &param, int line_num) {
   try {
     index = stoi(param.substr(1));
   } catch (const exception &e) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Invalid file reference '" + param +
-                        "': " + e.what());
+    throw ConfigParserError(line_num, "Invalid file reference'" + param +
+                                          "': " + e.what());
   }
 
   if (index < 1 || index > max_index) {
-    throw runtime_error(
-        "Line " + to_string(line_num) + ": File index '" + to_string(index) +
-        "' out of range. Expected from 1 to " + to_string(max_index));
+    throw ConfigParserError(line_num,
+                            "File index '" + to_string(index) +
+                                "' out of range. Expected from 1 to " +
+                                to_string(max_index));
   }
 
   return files[index];
@@ -113,20 +113,19 @@ double ConfigParser::parse_time_param(const string &param, double max_value,
   try {
     time = stod(param);
   } catch (const exception &e) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Invalid time parameter '" + param +
-                        "': " + e.what());
+    throw ConfigParserError(line_num, "Invalid time parameter '" + param +
+                                          "': " + e.what());
   }
 
   if (time < 0) {
     if (!end && time != -1.0) {
-      throw runtime_error("Line " + to_string(line_num) + ": Time '" +
-                          to_string(time) + "' cannot be negative");
+      throw ConfigParserError(line_num, "Time '" + to_string(time) +
+                                            "' cannot be negative");
     }
-  } else if (time >= max_value) {
-    throw runtime_error("Line " + to_string(line_num) + ": Time '" +
-                        to_string(time) + "' exceeds maximum value " +
-                        to_string(max_value));
+  } else if (time > max_value) {
+    throw ConfigParserError(line_num, "Time '" + to_string(time) +
+                                          "' exceeds maximum value " +
+                                          to_string(max_value));
   }
 
   return time;
@@ -139,15 +138,15 @@ double ConfigParser::parse_factor_param(const string &param, double min_value,
   try {
     factor = stod(param);
   } catch (const exception &e) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Invalid factor parameter: '" + param +
-                        "': " + e.what());
+    throw ConfigParserError(line_num, "Invalid factor parameter: '" + param +
+                                          "': " + e.what());
   }
 
   if (factor < min_value || factor > max_value) {
-    throw runtime_error("Line " + to_string(line_num) + ": Factor value '" +
-                        to_string(factor) + "' out of range. Expected from " +
-                        to_string(min_value) + " to " + to_string(max_value));
+    throw ConfigParserError(line_num, "Factor value '" + to_string(factor) +
+                                          "' out of range. Expected from " +
+                                          to_string(min_value) + " to " +
+                                          to_string(max_value));
   }
 
   return factor;

@@ -10,11 +10,11 @@ private:
   double end_time;
 
 public:
-  Cropper(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+  Cropper(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
           double start_time, double ent_time);
 
-  static unique_ptr<Cropper> create(shared_ptr<WavReader> input,
-                                    shared_ptr<WavWriter> output,
+  static unique_ptr<Cropper> create(shared_ptr<WavWriter> output,
+                                    shared_ptr<WavReader> input,
                                     const vector<string> &params, int line_num);
 
   void convert() override;

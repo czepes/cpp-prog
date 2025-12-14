@@ -14,7 +14,7 @@ protected:
   shared_ptr<WavReader> input;
 
 public:
-  Converter(shared_ptr<WavReader> input, shared_ptr<WavWriter> output)
+  Converter(shared_ptr<WavWriter> output, shared_ptr<WavReader> input)
       : output(output), input(input) {};
   virtual ~Converter() = default;
   virtual void convert() = 0;
@@ -25,7 +25,7 @@ public:
 };
 
 using ConverterCreator =
-    function<unique_ptr<Converter>(shared_ptr<WavReader>, shared_ptr<WavWriter>,
+    function<unique_ptr<Converter>(shared_ptr<WavWriter>, shared_ptr<WavReader>,
                                    const vector<string> &, int line_num)>;
 
 class ConverterFactory {
@@ -38,13 +38,11 @@ private:
 public:
   static void init();
 
-  static void register_converter(const string &command,
-                                 ConverterCreator creator,
-                                 const string &description);
+  template <class Converter> static void register_converter();
 
   static unique_ptr<Converter> create(const string &command,
-                                      shared_ptr<WavReader> input,
                                       shared_ptr<WavWriter> output,
+                                      shared_ptr<WavReader> input,
                                       const vector<string> &params,
                                       int line_num);
 

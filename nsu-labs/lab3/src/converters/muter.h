@@ -9,11 +9,11 @@ private:
   double end_time;
 
 public:
-  Muter(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+  Muter(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
         double start_time = 0, double end_time = -1);
 
-  static unique_ptr<Muter> create(shared_ptr<WavReader> input,
-                                  shared_ptr<WavWriter> output,
+  static unique_ptr<Muter> create(shared_ptr<WavWriter> output,
+                                  shared_ptr<WavReader> input,
                                   const vector<string> &params,
                                   int line_num = 0);
 

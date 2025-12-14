@@ -11,12 +11,12 @@ private:
   double end_time;
 
 public:
-  Mixer(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+  Mixer(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
         shared_ptr<WavReader> input2, double start_time = 0,
         double end_time = -1);
 
-  static unique_ptr<Mixer> create(shared_ptr<WavReader> input,
-                                  shared_ptr<WavWriter> output,
+  static unique_ptr<Mixer> create(shared_ptr<WavWriter> output,
+                                  shared_ptr<WavReader> input,
                                   const vector<string> &params,
                                   int line_num = 0);
 

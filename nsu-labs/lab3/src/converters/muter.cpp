@@ -1,9 +1,9 @@
 #include "muter.h"
 #include "../config-parser.h"
-#include <stdexcept>
+#include "../errors.h"
 
-unique_ptr<Muter> Muter::create(shared_ptr<WavReader> input,
-                                shared_ptr<WavWriter> output,
+unique_ptr<Muter> Muter::create(shared_ptr<WavWriter> output,
+                                shared_ptr<WavReader> input,
                                 const vector<string> &params, int line_num) {
   double start_time = 0;
   double end_time = -1;
@@ -17,16 +17,16 @@ unique_ptr<Muter> Muter::create(shared_ptr<WavReader> input,
   }
 
   if (end_time != -1 && start_time > end_time) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Muter start time cannot be greater than end time");
+    throw ConverterError(line_num,
+                         "Muter start time cannot be greater than end time");
   }
 
-  return make_unique<Muter>(input, output, start_time, end_time);
+  return make_unique<Muter>(output, input, start_time, end_time);
 }
 
-Muter::Muter(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+Muter::Muter(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
              double start_time, double end_time)
-    : Converter(input, output), start_time(start_time), end_time(end_time) {};
+    : Converter(output, input), start_time(start_time), end_time(end_time) {};
 
 void Muter::convert() {
   if (!input || !output) {

@@ -1,9 +1,10 @@
 #include "gainer.h"
 #include "../config-parser.h"
+#include "../errors.h"
 #include <limits>
 
-unique_ptr<Gainer> Gainer::create(shared_ptr<WavReader> input,
-                                  shared_ptr<WavWriter> output,
+unique_ptr<Gainer> Gainer::create(shared_ptr<WavWriter> output,
+                                  shared_ptr<WavReader> input,
                                   const vector<string> &params, int line_num) {
   double factor = 1;
   double start_time = 0;
@@ -24,15 +25,16 @@ unique_ptr<Gainer> Gainer::create(shared_ptr<WavReader> input,
   }
 
   if (end_time != -1 && start_time > end_time) {
-    throw runtime_error("Gainer start time cannot be greater than end time");
+    throw ConverterError(line_num,
+                         "Gainer start time cannot be greater than end time");
   }
 
-  return make_unique<Gainer>(input, output, factor, start_time, end_time);
+  return make_unique<Gainer>(output, input, factor, start_time, end_time);
 };
 
-Gainer::Gainer(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+Gainer::Gainer(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
                double factor, double start_time, double end_time)
-    : Converter(input, output), factor(factor), start_time(start_time),
+    : Converter(output, input), factor(factor), start_time(start_time),
       end_time(end_time) {};
 
 void Gainer::convert() {

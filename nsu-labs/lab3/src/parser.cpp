@@ -1,19 +1,19 @@
 #include "parser.h"
 #include "converter.h"
+#include "errors.h"
 #include <iostream>
 
 string ArgParser::help() {
   return "Sound processor\n"
          "/path/to/prog ❯ ./soundp\n"
-         "    [-c config.txt input1.wav [input2.wav, ...]]\n"
-         "    [-h | --help]\n"
-         "Configuration file options:\n" +
+         "    [-c config.txt output.wav input.wav [input1.wav, ...]]\n"
+         "    [-h | --help]\n" +
          ConverterFactory::help();
 }
 
 ArgParser &ArgParser::parse() {
   if (argc <= 1) {
-    throw runtime_error("Missing arguments:\n" + help());
+    throw ArgParserError("Missing arguments:\n" + help());
   }
 
   for (int i = 1; i < argc; i++) {
@@ -26,7 +26,7 @@ ArgParser &ArgParser::parse() {
 
     if (arg == "-c") {
       if (i + 3 > argc) {
-        throw invalid_argument("Missing configuration values:\n" + help());
+        throw ArgParserError("Missing configuration values:\n" + help());
       }
 
       config = argv[i + 1];
@@ -38,7 +38,7 @@ ArgParser &ArgParser::parse() {
       break;
     }
 
-    throw invalid_argument("Unknown argument " + arg);
+    throw ArgParserError("Unknown argument " + arg);
   }
 
   return *this;

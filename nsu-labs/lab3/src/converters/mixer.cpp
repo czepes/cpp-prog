@@ -1,18 +1,17 @@
 #include "mixer.h"
 #include "../config-parser.h"
+#include "../errors.h"
 #include <memory>
-#include <stdexcept>
 
-unique_ptr<Mixer> Mixer::create(shared_ptr<WavReader> input,
-                                shared_ptr<WavWriter> output,
+unique_ptr<Mixer> Mixer::create(shared_ptr<WavWriter> output,
+                                shared_ptr<WavReader> input,
                                 const vector<string> &params, int line_num) {
   double start_time = 0;
   double end_time = -1;
   double max_time = input->get_duration();
 
   if (params.size() < 1) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Missing file reference");
+    throw ConverterError(line_num, "Missing file reference");
   }
 
   shared_ptr<WavReader> input2 = make_shared<WavReader>(params[0]);
@@ -25,15 +24,15 @@ unique_ptr<Mixer> Mixer::create(shared_ptr<WavReader> input,
   }
 
   if (end_time != -1 && start_time > end_time) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Muter start time cannot be greater than end time");
+    throw ConverterError(line_num,
+                         "Muter start time cannot be greater than end time");
   }
 
-  return make_unique<Mixer>(input, output, input2, start_time, end_time);
+  return make_unique<Mixer>(output, input, input2, start_time, end_time);
 }
-Mixer::Mixer(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+Mixer::Mixer(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
              shared_ptr<WavReader> input2, double start_time, double end_time)
-    : Converter(input, output), input2(input2), start_time(start_time),
+    : Converter(output, input), input2(input2), start_time(start_time),
       end_time(end_time) {};
 
 void Mixer::convert() {

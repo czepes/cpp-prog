@@ -3,7 +3,6 @@
 
 #include "config-parser.h"
 #include <chrono>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -15,19 +14,13 @@ private:
   const vector<string> &files;
 
 public:
-  SoundProcessor(const string &config_file, const vector<string> &files)
-      : parser(config_file, files), files(files) {
-    if (files.size() < 2) {
-      throw runtime_error(
-          "Expected at least 2 files: output.wav and input.wav");
-    }
-  };
+  SoundProcessor(const string &config_file, const vector<string> &files);
   ~SoundProcessor();
   void process();
 
 private:
-  const string tmp1 = generate_temp_filename("tmp1", ".wav");
-  const string tmp2 = generate_temp_filename("tmp2", ".wav");
+  string tmp1;
+  string tmp2;
 
   string static generate_temp_filename(const string &prefix,
                                        const string &postfix) {

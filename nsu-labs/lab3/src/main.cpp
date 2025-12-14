@@ -1,6 +1,8 @@
 #include "converter.h"
+#include "errors.h"
 #include "parser.h"
 #include "soundp.h"
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 
@@ -14,22 +16,12 @@ int main(int argc, const char **argv) {
   ArgParser parser(argc, argv);
   try {
     parser.parse().get(config_file, files);
-  } catch (const exception &e) {
-    cerr << e.what();
-    return 1;
-  }
-
-  if (config_file.empty() || files.size() == 0) {
-    return 0;
-  }
-
-  try {
     soundp = make_unique<SoundProcessor>(config_file, files);
     soundp->process();
-  } catch (const exception &e) {
+  } catch (const SoundError &e) {
     cerr << e.what();
-    return 1;
+    return e.code();
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

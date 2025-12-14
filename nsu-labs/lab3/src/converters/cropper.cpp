@@ -1,9 +1,9 @@
 #include "cropper.h"
 #include "../config-parser.h"
-#include <stdexcept>
+#include "../errors.h"
 
-unique_ptr<Cropper> Cropper::create(shared_ptr<WavReader> input,
-                                    shared_ptr<WavWriter> output,
+unique_ptr<Cropper> Cropper::create(shared_ptr<WavWriter> output,
+                                    shared_ptr<WavReader> input,
                                     const vector<string> &params,
                                     int line_num) {
 
@@ -20,16 +20,16 @@ unique_ptr<Cropper> Cropper::create(shared_ptr<WavReader> input,
   }
 
   if (end_time != -1 && start_time > end_time) {
-    throw runtime_error("Line " + to_string(line_num) +
-                        ": Cropper start time cannot be greater than end time");
+    throw ConverterError(line_num,
+                         "Cropper start time cannot be greater than end time");
   }
 
-  return make_unique<Cropper>(input, output, start_time, end_time);
+  return make_unique<Cropper>(output, input, start_time, end_time);
 };
 
-Cropper::Cropper(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+Cropper::Cropper(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
                  double start_time, double end_time)
-    : Converter(input, output), start_time(start_time), end_time(end_time) {};
+    : Converter(output, input), start_time(start_time), end_time(end_time) {};
 
 void Cropper::convert() {
   if (!input || !output) {

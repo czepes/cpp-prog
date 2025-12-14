@@ -10,11 +10,11 @@ private:
   double end_time;
 
 public:
-  Gainer(shared_ptr<WavReader> input, shared_ptr<WavWriter> output,
+  Gainer(shared_ptr<WavWriter> output, shared_ptr<WavReader> input,
          double factor = 1, double start_time = 0, double end_time = -1);
 
-  static unique_ptr<Gainer> create(shared_ptr<WavReader> input,
-                                   shared_ptr<WavWriter> output,
+  static unique_ptr<Gainer> create(shared_ptr<WavWriter> output,
+                                   shared_ptr<WavReader> input,
                                    const vector<string> &params, int line_num);
 
   void convert() override;
@@ -23,7 +23,9 @@ public:
     return "Increase/decrease audio file volume in specified time interval";
   }
   static string get_command() { return "gain"; }
-  static string get_usage() { return get_command() + " [start] [end]"; };
+  static string get_usage() {
+    return get_command() + " [factor] [start] [end]";
+  };
 };
 
 #endif
