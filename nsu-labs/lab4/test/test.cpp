@@ -8,11 +8,9 @@
 
 using namespace std;
 
-// Тестовый CSV файл для тестов
 const string TEST_CSV_CONTENT =
     "1;Alice;25.5\n2;Bob;30.0\n3;Charlie;22.7\n4;Diana;35.2";
 
-// Функция для создания временного файла
 string create_temp_csv(const string &content) {
   string filename = "test_temp.csv";
   ofstream file(filename);
@@ -42,7 +40,6 @@ TEST(CSVParserTest, BasicParsing) {
   filesystem::remove(filename);
 }
 
-// Тест 2: Пропуск строк
 TEST(CSVParserTest, SkipLines) {
   string content =
       "header1;header2;header3\ncomment;ignore;this\n1;Alice;25.5\n2;Bob;30.0";
@@ -60,7 +57,6 @@ TEST(CSVParserTest, SkipLines) {
   filesystem::remove(filename);
 }
 
-// Тест 3: Пустые строки
 TEST(CSVParserTest, EmptyLines) {
   string content = "1;Alice;25.5\n\n2;Bob;30.0\n\n3;Charlie;22.7\n\n";
 
@@ -77,7 +73,6 @@ TEST(CSVParserTest, EmptyLines) {
   filesystem::remove(filename);
 }
 
-// Тест 4: Кавычки
 TEST(CSVParserTest, WithQuotes) {
   string content = "1;'Alice Smith';25.5\n2;'Bob ''The "
                    "Builder''';30.0\n3;'Charlie, Jr.';22.7";
@@ -96,7 +91,6 @@ TEST(CSVParserTest, WithQuotes) {
   filesystem::remove(filename);
 }
 
-// Тест 5: Другой разделитель
 TEST(CSVParserTest, DifferentDelimiter) {
   string content = "1,Alice,25.5\n2,Bob,30.0\n3,Charlie,22.7";
 
@@ -113,7 +107,6 @@ TEST(CSVParserTest, DifferentDelimiter) {
   filesystem::remove(filename);
 }
 
-// Тест 6: Исключения при неверном количестве колонок
 TEST(CSVParserTest, WrongNumberOfColumns) {
   string content = "1;Alice\n2;Bob;30.0;extra\n3;Charlie;22.7";
 
@@ -123,7 +116,6 @@ TEST(CSVParserTest, WrongNumberOfColumns) {
   EXPECT_THROW(
       {
         for (const auto &row : parser) {
-          // Просто пытаемся пройтись по всем строкам
         }
       },
       CSVError);
@@ -131,7 +123,6 @@ TEST(CSVParserTest, WrongNumberOfColumns) {
   filesystem::remove(filename);
 }
 
-// Тест 7: Исключения при конвертации типов
 TEST(CSVParserTest, TypeConversionError) {
   string content = "1;Alice;25.5\nnot_a_number;Bob;30.0\n3;Charlie;22.7";
 
@@ -139,14 +130,12 @@ TEST(CSVParserTest, TypeConversionError) {
   CSVParser<int, string, double> parser(filename, 0, ';');
 
   auto it = parser.begin();
-  EXPECT_NO_THROW(*it); // Первая строка должна быть OK
-
-  EXPECT_THROW(++it, CSVError); // Вторая строка должна бросить исключение
+  EXPECT_NO_THROW(*it);
+  EXPECT_THROW(++it, CSVError);
 
   filesystem::remove(filename);
 }
 
-// Тест 8: Итераторы
 TEST(CSVParserTest, IteratorOperations) {
   string filename = create_temp_csv(TEST_CSV_CONTENT);
   CSVParser<int, string, double> parser(filename, 0, ';');
@@ -156,12 +145,10 @@ TEST(CSVParserTest, IteratorOperations) {
 
   EXPECT_NE(it, end);
 
-  // Проверяем постинкремент
   auto it2 = it++;
   EXPECT_EQ(*it2, make_tuple(1, "Alice", 25.5));
   EXPECT_EQ(*it, make_tuple(2, "Bob", 30.0));
 
-  // Проверяем преинкремент
   ++it;
   EXPECT_EQ(*it, make_tuple(3, "Charlie", 22.7));
 
@@ -191,7 +178,6 @@ TEST(CSVParserTest, VariousTypes) {
 // ========== ERRORS TESTS ==========
 
 TEST(CSVErrorTest, ErrorMessages) {
-  // Тест неверного количества кавычек
   string content = "1;\"Alice;25.5\n2;Bob;30.0";
 
   string filename = create_temp_csv(content);
@@ -199,7 +185,6 @@ TEST(CSVErrorTest, ErrorMessages) {
 
   try {
     for (const auto &row : parser) {
-      // Просто проходим по строкам
     }
     FAIL() << "Expected CSVError exception";
   } catch (const CSVError &e) {
@@ -211,7 +196,6 @@ TEST(CSVErrorTest, ErrorMessages) {
 }
 
 TEST(CSVErrorTest, MidQuoteError) {
-  // Кавычка в середине поля без кавычек
   string content = "1;Ali\"ce;25.5";
 
   string filename = create_temp_csv(content);
@@ -219,7 +203,6 @@ TEST(CSVErrorTest, MidQuoteError) {
 
   try {
     for (const auto &row : parser) {
-      // Просто проходим по строкам
     }
     FAIL() << "Expected CSVError exception";
   } catch (const CSVError &e) {

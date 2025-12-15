@@ -173,7 +173,7 @@ public:
         } else {
           stringstream converter(str);
           Type value;
-          str >> value;
+          converter >> value;
           if (converter.fail()) {
             throw invalid_argument("Conversion via stringstream failed");
           }
