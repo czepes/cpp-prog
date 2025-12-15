@@ -37,6 +37,7 @@ template <class ConverterImpl> void ConverterFactory::register_converter() {
   const ConverterCreator creator = ConverterImpl::create;
   const string description =
       "  " + ConverterImpl::get_desc() + "\n  " + ConverterImpl::get_usage();
+
   get_creator_registry()[command] = creator;
   get_description_registry()[command] = description;
 }

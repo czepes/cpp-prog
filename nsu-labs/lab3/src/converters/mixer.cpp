@@ -15,6 +15,7 @@ unique_ptr<Mixer> Mixer::create(shared_ptr<WavWriter> output,
   }
 
   shared_ptr<WavReader> input2 = make_shared<WavReader>(params[0]);
+  max_time = max(max_time, input2->get_duration());
 
   if (params.size() >= 2) {
     start_time = ConfigParser::parse_time_param(params[1], max_time, line_num);
@@ -25,7 +26,7 @@ unique_ptr<Mixer> Mixer::create(shared_ptr<WavWriter> output,
 
   if (end_time != -1 && start_time > end_time) {
     throw ConverterError(line_num,
-                         "Muter start time cannot be greater than end time");
+                         "Mixer start time cannot be greater than end time");
   }
 
   return make_unique<Mixer>(output, input, input2, start_time, end_time);
@@ -46,8 +47,11 @@ void Mixer::convert() {
   audio_buffer_t samples2(SAMPLES_SIZE);
 
   const size_t start = input->seconds_to_sample(start_time);
-  const size_t end = end_time < 0 ? input->get_total_samples()
-                                  : input->seconds_to_sample(end_time);
+  const size_t end1 = end_time < 0 ? input->get_total_samples()
+                                   : input->seconds_to_sample(end_time);
+  const size_t end2 = end_time < 0 ? input2->get_total_samples()
+                                   : input2->seconds_to_sample(end_time);
+  const size_t end = max(end1, end2);
 
   input->reset();
   if (!same) {
@@ -70,14 +74,21 @@ void Mixer::convert() {
     size_t to_read = min(SAMPLES_SIZE, end - output->get_current_pos());
     size_t read = input->read(samples, to_read);
 
-    if (read == 0) {
-      break;
-    }
-
     if (!same && !input2->eof()) {
       size_t read2 = input2->read(samples2, to_read);
-      for (size_t j = 0; j < min(read, read2); j++) {
-        samples[j] = samples[j] / 2 + samples2[j] / 2;
+      if (read == 0) {
+        samples = samples2;
+      } else {
+        size_t j = 0;
+        for (; j < min(read, read2); j++) {
+          samples[j] = samples[j] / 2 + samples2[j] / 2;
+        }
+        if (j < read2) {
+          samples.resize(read2);
+          for (; j < read2; j++) {
+            samples[j] = samples2[j];
+          }
+        }
       }
     }
 

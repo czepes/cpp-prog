@@ -1,6 +1,7 @@
 #include "gainer.h"
 #include "../config-parser.h"
 #include "../errors.h"
+#include <algorithm>
 #include <limits>
 
 unique_ptr<Gainer> Gainer::create(shared_ptr<WavWriter> output,
@@ -75,11 +76,7 @@ void Gainer::convert() {
 
     for (sample_t &sample : samples) {
       int32_t gained = sample * factor;
-      if (sample < 0) {
-        sample = max(gained, mins);
-      } else {
-        sample = min(gained, maxs);
-      }
+      gained = clamp(gained, mins, maxs);
     }
 
     output->write(samples);
